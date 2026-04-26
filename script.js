@@ -986,8 +986,37 @@ function applyResponsiveZoom() {
 window.addEventListener('resize', applyResponsiveZoom);
 document.addEventListener('DOMContentLoaded', applyResponsiveZoom);
 
+/* ---- Unified sidebar ---- one source of truth, injected on every page ---- */
+const SIDEBAR_LINKS = [
+  { href: 'get-cards.html',     label: 'GET CARDS' },
+  { href: 'cards-market.html',  label: 'CARD MARKET' },
+  { href: 'collection.html',    label: 'MY COLLECTION' },
+  { href: 'play-dtoons.html',   label: 'PLAY dTOONS' },
+  { href: 'simulator.html',     label: 'SIMULATOR' },
+  { href: 'my-orbit.html',      label: 'MY ORBIT' },
+  { href: 'visit-dzones.html',  label: 'VISIT dZONES' },
+  { href: 'orbit-help.html',    label: 'ORBIT HELP' },
+  { href: 'trade.html',         label: 'TRADE',    style: 'background:var(--orange);' },
+  { href: 'login.html',         label: 'SIGN IN' },
+];
+
+function paintSidebar() {
+  const sidebar = document.querySelector('aside.sidebar');
+  if (!sidebar) return;
+  const here = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  let html = '';
+  SIDEBAR_LINKS.forEach(l => {
+    const active = l.href === here ? ' active' : '';
+    const style  = l.style ? (' style="' + l.style + '"') : '';
+    html += '<a class="side-tab' + active + '" href="' + l.href + '"' + style + '>' + l.label + '</a>';
+  });
+  html += '<div class="ad-slot">AD</div>';
+  sidebar.innerHTML = html;
+}
+
 /* ---- Global nav button routing + DT logo back-to-home ---- */
 document.addEventListener('DOMContentLoaded', () => {
+  paintSidebar();
   initFeatureCircles();
   initFeaturedCode();
   const map = {
