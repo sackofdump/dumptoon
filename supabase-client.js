@@ -173,7 +173,7 @@
 })();
 
 /* DOMContentLoaded — paint header pill + hook __dt.save → debouncedSyncUp. */
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
   if (!window.dtAuth) return;
 
   // Wrap __dt.save so every state change pushes to Supabase when signed in.
@@ -186,13 +186,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.dtAuth.debouncedSyncUp();
       }
     };
-  }
-
-  // Resolve auth state. If guest, clear leftover wallet/inventory so the page
-  // doesn't show "$19.45" from a previous logged-out browse.
-  try { await window.dtAuth.ready(); } catch {}
-  if (!window.dtAuth.getUser() && window.__dt && window.__dt.resetToDefault) {
-    window.__dt.resetToDefault();
   }
 
   function paint(user) {
@@ -227,4 +220,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
   window.dtAuth.onChange(paint);
+
+  // Reset guest state AFTER paint listener is registered so we never end up
+  // stuck with stale "guest · $X.XX" if the auth call hangs.
+  (async () => {
+    try { await window.dtAuth.ready(); } catch {}
+    if (!window.dtAuth.getUser() && window.__dt && window.__dt.resetToDefault) {
+      window.__dt.resetToDefault();
+      paint(null); // re-paint after wiping local state
+    }
+  })();
 });
