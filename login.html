@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1280" />
+<title>Dumptoon — Sign In</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .auth-card {
+    max-width: 460px; margin: 24px auto;
+    background: var(--panel-light); border: 8px solid var(--bg-mid);
+    padding: 24px;
+  }
+  .auth-card h2 { margin: 0 0 8px; font-family: 'Oswald', sans-serif; letter-spacing: 2px; color: var(--text-dark); }
+  .auth-card p { color: var(--text-muted); margin: 0 0 18px; }
+  .auth-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .auth-tab {
+    flex: 1; padding: 10px; cursor: pointer;
+    background: var(--bg-mid); color: #cfe2e8;
+    font-family: 'Oswald', sans-serif; letter-spacing: 1px;
+    border: none; text-align: center;
+  }
+  .auth-tab.active { background: var(--green); color: #fff; }
+  .auth-pane { display: none; }
+  .auth-pane.active { display: block; }
+  .auth-pane label { display: block; margin: 10px 0 4px; color: var(--text-dark); font-family: 'Oswald', sans-serif; letter-spacing: 1px; font-size: 13px; }
+  .auth-pane input { width: 100%; padding: 10px; border: 2px solid var(--bg-mid); font-size: 14px; }
+  .auth-pane button.primary {
+    margin-top: 14px; width: 100%; padding: 12px;
+    background: var(--green); color: #fff; border: none;
+    font-family: 'Oswald', sans-serif; letter-spacing: 2px; cursor: pointer;
+  }
+  .auth-pane button.primary:hover { filter: brightness(1.1); }
+  .auth-msg { margin-top: 12px; padding: 10px; font-size: 13px; }
+  .auth-msg.ok  { background: #d2f0a3; color: #2e6f24; }
+  .auth-msg.err { background: #ffd1cf; color: #8a1010; }
+  .auth-warn { background: #fff5cc; color: #6b5400; padding: 10px; margin-bottom: 14px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="top-ad">AD &middot; 728 &times; 90</div>
+
+<div class="page">
+  <div class="dt-header">
+    <div class="dt-logo"><span class="small">DUMPTOON</span><span class="big">DT</span><span class="tag">NETWORK</span></div>
+    <nav class="dt-nav">
+      <button class="nav-btn red">GAMES</button>
+      <button class="nav-btn blue">TV SHOWS</button>
+      <button class="nav-btn green">TRADING CARDS</button>
+      <button class="nav-btn orange">SHOP</button>
+    </nav>
+  </div>
+
+  <div class="orbit-bar">
+    <div class="brand"><span class="o-icon"></span><em>ORBIT&reg;</em> SIGN IN</div>
+    <div class="signed-in">
+      <span class="pill" id="userPill">guest &middot; <span id="userCoins">$0.00</span></span>
+      <button class="logout">LOGIN</button>
+    </div>
+  </div>
+
+  <div class="auth-card">
+    <h2>SIGN IN TO ORBIT</h2>
+    <p>Save your wallet, inventory and decks across devices.</p>
+
+    <div id="authWarn" class="auth-warn" style="display:none;">
+      Supabase isn't configured yet. Copy <code>config.js</code> to <code>config.local.js</code>,
+      fill in your project URL and anon key, then reload.
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-pane="signin">SIGN IN</button>
+      <button class="auth-tab" data-pane="signup">CREATE</button>
+      <button class="auth-tab" data-pane="magic">MAGIC LINK</button>
+    </div>
+
+    <div class="auth-pane active" data-pane="signin">
+      <form id="formSignin">
+        <label>EMAIL</label><input type="email" name="email" required />
+        <label>PASSWORD</label><input type="password" name="password" required />
+        <button class="primary" type="submit">SIGN IN</button>
+      </form>
+    </div>
+    <div class="auth-pane" data-pane="signup">
+      <form id="formSignup">
+        <label>EMAIL</label><input type="email" name="email" required />
+        <label>PASSWORD (min 6)</label><input type="password" name="password" minlength="6" required />
+        <button class="primary" type="submit">CREATE ACCOUNT</button>
+      </form>
+    </div>
+    <div class="auth-pane" data-pane="magic">
+      <form id="formMagic">
+        <label>EMAIL</label><input type="email" name="email" required />
+        <button class="primary" type="submit">EMAIL ME A LINK</button>
+      </form>
+    </div>
+
+    <div id="authMsg"></div>
+  </div>
+</div>
+
+<footer>DUMPTOON DT NETWORK &middot; PLACEHOLDER TEMPLATE</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="config.local.js" onerror="console.info('No config.local.js — using committed defaults')"></script>
+<script src="supabase-client.js"></script>
+<script>
+  const msg = document.getElementById('authMsg');
+  function show(kind, text) { msg.innerHTML = `<div class="auth-msg ${kind}">${text}</div>`; }
+  function clear() { msg.innerHTML = ''; }
+
+  if (!window.dtAuth || !window.dtAuth.configured) {
+    document.getElementById('authWarn').style.display = 'block';
+  }
+
+  document.querySelectorAll('.auth-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t === tab));
+      document.querySelectorAll('.auth-pane').forEach(p => p.classList.toggle('active', p.dataset.pane === tab.dataset.pane));
+      clear();
+    });
+  });
+
+  function bind(formId, fn) {
+    document.getElementById(formId).addEventListener('submit', async e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        await fn(Object.fromEntries(fd));
+      } catch (err) {
+        show('err', err.message || 'Something went wrong.');
+      }
+    });
+  }
+
+  bind('formSignin', async ({email, password}) => {
+    await window.dtAuth.signIn(email, password);
+    show('ok', 'Signed in. Redirecting…');
+    setTimeout(() => window.location.href = 'index.html', 600);
+  });
+  bind('formSignup', async ({email, password}) => {
+    await window.dtAuth.signUp(email, password);
+    show('ok', 'Account created. Check your email if confirmation is required, then sign in.');
+  });
+  bind('formMagic', async ({email}) => {
+    await window.dtAuth.sendMagicLink(email);
+    show('ok', 'Magic link sent. Check your inbox.');
+  });
+</script>
+</body>
+</html>
