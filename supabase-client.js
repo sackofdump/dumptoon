@@ -21,8 +21,12 @@
 
   async function refresh() {
     if (!client) { cachedUser = null; emit(); return null; }
-    const { data } = await client.auth.getUser();
-    cachedUser = data && data.user ? data.user : null;
+    // getSession() reads the local cached session synchronously — no network round
+    // trip. getUser() validates against the server and can spuriously return null
+    // on slow/failed requests, which made the pill keep showing "SIGN IN TO SAVE"
+    // even when a valid session existed.
+    const { data } = await client.auth.getSession();
+    cachedUser = data && data.session && data.session.user ? data.session.user : null;
     emit();
     return cachedUser;
   }
@@ -221,13 +225,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   window.dtAuth.onChange(paint);
 
-  // Reset guest state AFTER paint listener is registered so we never end up
-  // stuck with stale "guest · $X.XX" if the auth call hangs.
+  // After auth resolves, ALWAYS force a re-paint with the actual current user.
+  // Prevents the pill from getting stuck on the initial paint(null) if the auth
+  // resolution happens between paint registration and the paint() actually
+  // running with the right value.
   (async () => {
     try { await window.dtAuth.ready(); } catch {}
-    if (!window.dtAuth.getUser() && window.__dt && window.__dt.resetToDefault) {
+    const u = window.dtAuth.getUser();
+    paint(u);
+    if (!u && window.__dt && window.__dt.resetToDefault) {
       window.__dt.resetToDefault();
-      paint(null); // re-paint after wiping local state
+      paint(null);
     }
   })();
 });

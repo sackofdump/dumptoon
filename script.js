@@ -194,20 +194,24 @@ function renderPullResult(pack, pulled) {
 }
 
 /* ---- Trade page ---- */
-async function initTrade() {
+function initTrade() {
   const tbody = document.getElementById('onlinePlayers');
-  const users = await fetchOnlineUsers();
-  if (!users.length) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--text-muted);">' +
-      'No other Orbiters online yet. Trading needs another signed-up user.</td></tr>';
-  } else {
-    users.forEach(p => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${p.name}</td><td>${p.status}</td><td>${p.cards}</td>` +
-                     `<td><button class="trade" data-name="${p.name}">TRADE</button></td>`;
-      tbody.appendChild(tr);
-    });
-  }
+  // Show a placeholder immediately; fill from Supabase after.
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--text-muted);">Loading…</td></tr>';
+  fetchOnlineUsers().then(users => {
+    if (!users.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--text-muted);">' +
+        'No other Orbiters online yet. Trading needs another signed-up user.</td></tr>';
+    } else {
+      tbody.innerHTML = '';
+      users.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${p.name}</td><td>${p.status}</td><td>${p.cards}</td>` +
+                       `<td><button class="trade" data-name="${p.name}">TRADE</button></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+  }).catch(() => {});
 
   const yourInv = document.getElementById('yourInventory');
   const theirInv = document.getElementById('theirInventory');
@@ -767,26 +771,16 @@ function startCartoonCombat(opponent) {
   repaint();
 }
 
-async function initDuel() {
+function initDuel() {
   const tbody = document.getElementById('duelLobby');
   if (!tbody) return;
-  // Always offer practice vs AI at the top so users can duel even when alone.
+
+  // Render AI Bot row + attach listener IMMEDIATELY so clicking DUEL works
+  // even if the async user fetch hangs.
   tbody.innerHTML =
     '<tr><td><b>AI BOT</b></td><td>Cadet</td><td>Practice</td>' +
     '<td><button class="play" data-name="AI Bot" data-rank="Cadet">DUEL</button></td></tr>';
-  const users = await fetchOnlineUsers();
-  if (!users.length) {
-    tbody.insertAdjacentHTML('beforeend',
-      '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--text-muted);">' +
-      'No other Orbiters online yet. Practice vs AI above, or invite friends to sign up.</td></tr>');
-  } else {
-    users.forEach(p => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = '<td>' + p.name + '</td><td>' + p.rank + '</td><td>' + p.deck + '</td>' +
-                     '<td><button class="play" data-name="' + p.name + '" data-rank="' + p.rank + '">DUEL</button></td>';
-      tbody.appendChild(tr);
-    });
-  }
+
   tbody.addEventListener('click', e => {
     const btn = e.target.closest('button.play');
     if (!btn) return;
@@ -800,6 +794,22 @@ async function initDuel() {
   streakNote.innerHTML = 'Wins: <b>' + (s.duelsWon || 0) + '</b> &nbsp; Streak: <b>' + (s.duelStreak || 0) +
                          '</b> &nbsp; (Win 5 in a row for a bonus card.)';
   document.querySelector('.lobby-list').appendChild(streakNote);
+
+  // Now fetch real users in the background; failure is fine, we already have AI.
+  fetchOnlineUsers().then(users => {
+    if (!users.length) {
+      tbody.insertAdjacentHTML('beforeend',
+        '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--text-muted);">' +
+        'No other Orbiters online yet. Practice vs AI above, or invite friends to sign up.</td></tr>');
+    } else {
+      users.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + p.name + '</td><td>' + p.rank + '</td><td>' + p.deck + '</td>' +
+                       '<td><button class="play" data-name="' + p.name + '" data-rank="' + p.rank + '">DUEL</button></td>';
+        tbody.appendChild(tr);
+      });
+    }
+  }).catch(() => {});
 }
 
 /* ---- Duel arena page (duel.html) ---- */
@@ -1253,6 +1263,13 @@ function initOrbit() {
   }
 
   tray.addEventListener('dragover', e => e.preventDefault());
+
+  // Manual save button — runs the same savePlacements + a confirmation flash.
+  const saveBtn = document.getElementById('orbitSave');
+  if (saveBtn) saveBtn.addEventListener('click', () => {
+    savePlacements();
+    flash('Profile saved.');
+  });
 }
 
 /* ---- Zones / arcade ---- */
@@ -1431,10 +1448,17 @@ function initCollection() {
     const s = window.__dt.load();
     const idx = (s.inventory || []).indexOf(id);
     if (idx < 0) { flash('You no longer own that card.'); paint(); return; }
-    s.inventory.splice(idx, 1);
-    s.coins += price;
-    s.cardsSold = (s.cardsSold || 0) + 1;
-    window.__dt.save(s);
+    // Defensive copy — `s.inventory` may be a reference to defaultState.inventory
+    // when the user has never saved before. Mutating it directly would corrupt
+    // the shared default. Build a fresh array, and a fresh state object.
+    const newInventory = (s.inventory || []).slice();
+    newInventory.splice(idx, 1);
+    const newState = Object.assign({}, s, {
+      inventory: newInventory,
+      coins: (s.coins || 0) + price,
+      cardsSold: (s.cardsSold || 0) + 1,
+    });
+    window.__dt.save(newState);
     window.__dt.paintWallet();
     flash('Sold ' + card.name + ' for +$' + (price/100).toFixed(2));
     paint();
