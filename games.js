@@ -19,12 +19,15 @@
     build(modal.querySelector('.game-body'), () => modal.remove());
   }
 
-  function payout(cents, label) {
+  function payout(cents, label, gameId) {
     const s = window.__dt.load();
     s.coins += cents;
+    s.gamesPlayed = s.gamesPlayed || [];
+    if (gameId && !s.gamesPlayed.includes(gameId)) s.gamesPlayed.push(gameId);
     window.__dt.save(s);
     window.__dt.paintWallet();
     window.flash && window.flash(label + ': +$' + (cents/100).toFixed(2));
+    if (window.checkAchievements) setTimeout(window.checkAchievements, 100);
   }
 
   /* --- COIN CRUSHER — whack-a-toon, 30s --- */
@@ -67,7 +70,7 @@
     function end() {
       clearInterval(popper);
       const cents = score; // 1 cent per hit
-      payout(cents, 'Coin Crusher');
+      payout(cents, 'Coin Crusher', 'coin-crusher');
       host.innerHTML = `<h2 style="color:#cfe2e8;text-align:center;">TIME UP — ${score} hits → +$${(cents/100).toFixed(2)}</h2>`;
     }
   }
@@ -124,7 +127,7 @@
     function end() {
       alive = false; clearInterval(spawner);
       const cents = score * 5;
-      payout(cents, 'Jelly Fall');
+      payout(cents, 'Jelly Fall', 'jelly-fall');
       host.innerHTML = `<h2 style="color:#cfe2e8;text-align:center;">GAME OVER — ${score} jellies × 5¢ = +$${(cents/100).toFixed(2)}</h2>`;
     }
     const spawner = setInterval(spawn, 700);
@@ -165,10 +168,73 @@
     function end() {
       // Best score = 8 moves (perfect). Payout: 200c if perfect, scales down to 30c at 25+ moves.
       const cents = Math.max(30, 200 - (moves - 8) * 10);
-      payout(cents, 'Spook Match');
+      payout(cents, 'Spook Match', 'spook-match');
       setTimeout(() => {
         host.innerHTML = `<h2 style="color:#cfe2e8;text-align:center;">CLEARED in ${moves} moves — +$${(cents/100).toFixed(2)}</h2>`;
       }, 600);
+    }
+  }
+
+  /* --- TRASH DASH — Chrome-dino-style runner. SPACE / click to jump. --- */
+  function trashDash(host) {
+    let alive = true, score = 0, speed = 4, jumping = false, vy = 0, gy = 0;
+    host.innerHTML =
+      '<div class="td-hud"><span>DISTANCE: <b id="tdScore">0</b>m</span><span>SPACE / TAP to jump</span></div>' +
+      '<div class="td-arena">' +
+        '<div class="td-ground"></div>' +
+        '<div class="td-runner"></div>' +
+      '</div>' +
+      '<p style="margin-top:8px;color:#cfe2e8;">Hop the trash. Each meter = 1¢.</p>';
+    const arena   = host.querySelector('.td-arena');
+    const runner  = host.querySelector('.td-runner');
+    const obstacles = [];
+    function jump() {
+      if (jumping || !alive) return;
+      jumping = true; vy = -10;
+    }
+    arena.addEventListener('click', jump);
+    function keyHandler(e) { if (e.key === ' ') { e.preventDefault(); jump(); } }
+    document.addEventListener('keydown', keyHandler);
+    function spawnObstacle() {
+      if (!alive) return;
+      const o = document.createElement('div');
+      o.className = 'td-obstacle';
+      o.style.left = arena.clientWidth + 'px';
+      arena.appendChild(o);
+      obstacles.push(o);
+    }
+    let nextSpawn = 60;
+    function step() {
+      if (!alive) return;
+      score++; if (score % 5 === 0) host.querySelector('#tdScore').textContent = score;
+      if (score % 500 === 0) speed += 0.5;
+      // physics
+      if (jumping) {
+        gy += vy; vy += 0.6;
+        if (gy >= 0) { gy = 0; jumping = false; vy = 0; }
+        runner.style.bottom = (10 - gy) + 'px';
+      }
+      // move obstacles
+      obstacles.forEach((o, i) => {
+        const x = parseFloat(o.style.left) - speed;
+        o.style.left = x + 'px';
+        if (x < -30) { o.remove(); obstacles.splice(i,1); }
+        // collision: runner is at left ~30, width 30, height 40
+        if (x < 70 && x > 10 && gy > -25) {
+          end();
+        }
+      });
+      nextSpawn--;
+      if (nextSpawn <= 0) { spawnObstacle(); nextSpawn = 50 + Math.floor(Math.random() * 60); }
+      requestAnimationFrame(step);
+    }
+    step();
+    function end() {
+      alive = false;
+      document.removeEventListener('keydown', keyHandler);
+      const cents = score; // 1¢ per meter
+      payout(cents, 'Trash Dash', 'trash-dash');
+      host.innerHTML = '<h2 style="color:#cfe2e8;text-align:center;">CRASHED at ' + score + 'm — +$' + (cents/100).toFixed(2) + '</h2>';
     }
   }
 
@@ -176,7 +242,7 @@
     'coin-crusher': () => openGameModal('COIN CRUSHER', coinCrusher),
     'jelly-fall':   () => openGameModal('JELLY FALL',   jellyFall),
     'spook-match':  () => openGameModal('SPOOK MATCH',  spookMatch),
-    'trash-dash':   () => openGameModal('TRASH DASH',   (h) => h.innerHTML = '<h2 style="color:#cfe2e8;">Coming soon — side-scroll runner.</h2>'),
+    'trash-dash':   () => openGameModal('TRASH DASH',   trashDash),
   };
 
   // Auto-bind PLAY buttons that have data-game.

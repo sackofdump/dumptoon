@@ -20,11 +20,27 @@
   }
   window.__dt = { load, save, fmt, paintWallet };
 
+  // Make flash globally available before DOMContentLoaded handlers below need it.
+  window.__dt = { load, save, fmt, paintWallet };
+
   document.addEventListener('DOMContentLoaded', () => {
+    dailyLoginBonus();
     paintWallet();
     placeEasterEggs();
+    setTimeout(checkAchievements, 100); // run after other init
   });
 })();
+
+/* ---- Daily login bonus: $0.50 the first visit each calendar day ---- */
+function dailyLoginBonus() {
+  const s = window.__dt.load();
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  if (s.last_login_date === today) return;
+  s.last_login_date = today;
+  s.coins = (s.coins || 0) + 50;
+  window.__dt.save(s);
+  setTimeout(() => flash('Daily login bonus: +$0.50'), 800);
+}
 
 /* ---- Easter eggs scattered around the page ----
    Drops 2 eggs every 5 minutes, capped so the page never shows more than 2
@@ -60,6 +76,7 @@ function placeEasterEggs() {
   setInterval(topUp, EGG_INTERVAL_MS);
 }
 
+window.flash = function (msg) { return flash(msg); };
 function flash(msg) {
   let bar = document.getElementById('flashBar');
   if (!bar) {
@@ -212,7 +229,41 @@ function initTrade() {
       alert('Both sides need at least one card.');
       return;
     }
-    alert('Trade offered. Waiting on partner to confirm.');
+    const yourIds  = Array.from(yourOffer.children).map(c => c.dataset.cardId);
+    const theirIds = Array.from(theirOffer.children).map(c => c.dataset.cardId);
+    const partner = (partnerName.textContent || '').replace(/^THEM\s*[—-]\s*/, '') || 'partner';
+
+    // Verify the player still owns each offered card.
+    const inv = (window.__dt.load().inventory || []).slice();
+    for (const id of yourIds) {
+      const i = inv.indexOf(id);
+      if (i < 0) { alert('You no longer own one of the offered cards.'); return; }
+      inv.splice(i, 1);
+    }
+    if (!confirm('Send offer to ' + partner + '?\n\nGive: ' + yourIds.length + ' card(s)\nGet:  ' + theirIds.length + ' card(s)')) return;
+
+    flash('Offer sent. Waiting on ' + partner + '…');
+    setTimeout(() => {
+      // Simulated partner response: 85% accept, 15% counter-decline.
+      if (Math.random() < 0.85) {
+        const s = window.__dt.load();
+        // Remove your offered cards (one copy each), add theirs.
+        const newInv = (s.inventory || []).slice();
+        yourIds.forEach(id => { const i = newInv.indexOf(id); if (i >= 0) newInv.splice(i,1); });
+        theirIds.forEach(id => newInv.push(id));
+        s.inventory = newInv;
+        s.tradesCompleted = (s.tradesCompleted || 0) + 1;
+        window.__dt.save(s);
+        flash('Trade COMPLETE with ' + partner + '!');
+        // Refresh the displays.
+        fill(yourInv, s.inventory);
+        yourOffer.innerHTML = '';
+        theirOffer.innerHTML = '';
+        setTimeout(checkAchievements, 200);
+      } else {
+        flash(partner + ' declined the trade.');
+      }
+    }, 1400);
   });
   document.getElementById('cancelTrade').addEventListener('click', () => {
     yourOffer.innerHTML = '';
@@ -220,8 +271,270 @@ function initTrade() {
   });
 }
 
-/* ---- Duel page ---- */
+/* ====================================================================
+   ACHIEVEMENTS
+   ==================================================================== */
+const ACHIEVEMENTS = [
+  { id: 'first-pack',     name: 'FIRST PACK',     desc: 'Open your first pack',         check: s => (s.packsOpened || 0) >= 1 },
+  { id: 'pack-collector', name: 'PACK COLLECTOR', desc: 'Open 10 packs',                check: s => (s.packsOpened || 0) >= 10 },
+  { id: 'coin-hoarder',   name: 'COIN HOARDER',   desc: 'Reach $50 in your wallet',     check: s => (s.coins || 0) >= 5000 },
+  { id: 'roster-builder', name: 'ROSTER BUILDER', desc: 'Own 10 unique cards',          check: s => new Set(s.inventory || []).size >= 10 },
+  { id: 'legend-holder',  name: 'LEGEND HOLDER',  desc: 'Own a Legendary card',         check: s => (s.inventory || []).some(id => window.CARD_BY_ID && window.CARD_BY_ID[id] && window.CARD_BY_ID[id].rarity === 'legendary') },
+  { id: 'first-duel',     name: 'DUELIST',        desc: 'Win 1 duel',                   check: s => (s.duelsWon || 0) >= 1 },
+  { id: 'streak-5',       name: 'CHAMPION',       desc: 'Win 5 duels in a row',         check: s => (s.maxStreak || 0) >= 5 },
+  { id: 'cardsharp',      name: 'CARDSHARP',      desc: 'Sell 10 cards',                check: s => (s.cardsSold || 0) >= 10 },
+  { id: 'sweeper',        name: 'GAME SWEEPER',   desc: 'Play all 4 mini-games',        check: s => (s.gamesPlayed || []).length >= 4 },
+  { id: 'codebreak',      name: 'CODE BREAKER',   desc: 'Redeem a featured code',       check: s => (s.codes_redeemed || []).length >= 1 },
+  { id: 'decorator',      name: 'INTERIOR DESIGNER', desc: 'Place a card in My Orbit',  check: s => (s.orbitPlacements || []).length >= 1 },
+  { id: 'tradesman',      name: 'TRADESMAN',      desc: 'Complete a trade',             check: s => (s.tradesCompleted || 0) >= 1 },
+];
+
+window.checkAchievements = function () {
+  if (!window.CARD_BY_ID) return;
+  const s = window.__dt.load();
+  s.achievements = s.achievements || [];
+  let changed = false;
+  ACHIEVEMENTS.forEach(a => {
+    if (s.achievements.includes(a.id)) return;
+    if (a.check(s)) {
+      s.achievements.push(a.id);
+      changed = true;
+      showAchievementToast(a);
+    }
+  });
+  if (changed) window.__dt.save(s);
+};
+const checkAchievements = window.checkAchievements;
+
+function showAchievementToast(ach) {
+  const t = document.createElement('div');
+  t.className = 'achievement-toast';
+  t.innerHTML =
+    '<div class="ach-burst">★</div>' +
+    '<div class="ach-meta">' +
+      '<div class="ach-title">ACHIEVEMENT UNLOCKED</div>' +
+      '<div class="ach-name">' + ach.name + '</div>' +
+      '<div class="ach-desc">' + ach.desc + '</div>' +
+    '</div>';
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 500); }, 4500);
+}
+
+/* ====================================================================
+   PACK PITY — wraps window.rollPack from cards.js so that long droughts
+   guarantee an Epic / Legendary on the next pack open.
+   ==================================================================== */
+(function wrapRollPack() {
+  if (!window.rollPack) return;
+  const original = window.rollPack;
+  window.rollPack = function (packId) {
+    const s = window.__dt.load();
+    s.packsOpened = (s.packsOpened || 0) + 1;
+    s.packsSinceEpic     = (s.packsSinceEpic || 0) + 1;
+    s.packsSinceLegendary = (s.packsSinceLegendary || 0) + 1;
+    let result = original(packId);
+    const pity = [];
+    if (s.packsSinceLegendary >= 12 && !result.some(c => c.rarity === 'legendary')) {
+      const pool = window.CARDS_BY_RARITY.legendary;
+      result[0] = pool[Math.floor(Math.random() * pool.length)];
+      pity.push('Legendary pity');
+    }
+    if (s.packsSinceEpic >= 5 && !result.some(c => c.rarity === 'epic' || c.rarity === 'legendary')) {
+      const pool = window.CARDS_BY_RARITY.epic;
+      // replace a non-rare slot
+      const idx = result.findIndex(c => c.rarity === 'common');
+      if (idx >= 0) result[idx] = pool[Math.floor(Math.random() * pool.length)];
+      pity.push('Epic pity');
+    }
+    if (result.some(c => c.rarity === 'legendary')) s.packsSinceLegendary = 0;
+    if (result.some(c => c.rarity === 'epic') || result.some(c => c.rarity === 'legendary')) s.packsSinceEpic = 0;
+    window.__dt.save(s);
+    if (pity.length) setTimeout(() => flash(pity.join(' + ') + ' triggered!'), 1200);
+    setTimeout(checkAchievements, 200);
+    return result;
+  };
+})();
+
+/* ====================================================================
+   GLOBAL SEARCH — header search input routes to the card market.
+   ==================================================================== */
+function initGlobalSearch() {
+  document.querySelectorAll('.dt-search input[type="text"]').forEach(input => {
+    const go = () => {
+      const q = (input.value || '').trim();
+      if (!q) return;
+      window.location.href = 'cards-market.html?q=' + encodeURIComponent(q);
+    };
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+    const btn = input.parentElement.querySelector('.go-btn');
+    if (btn) btn.addEventListener('click', go);
+  });
+}
+
+/* ====================================================================
+   POLL VOTING — homepage survey records vote in localStorage.
+   ==================================================================== */
+function initPoll() {
+  const card = document.querySelector('.poll-card');
+  if (!card) return;
+  const btn = card.querySelector('.pickone');
+  const radios = card.querySelectorAll('input[type="radio"]');
+  if (!btn) return;
+  const s = window.__dt.load();
+  if (s.poll_voted) renderResults();
+  btn.addEventListener('click', () => {
+    const choice = Array.from(radios).find(r => r.checked);
+    if (!choice) { flash('Pick one first.'); return; }
+    const st = window.__dt.load();
+    st.poll_voted = choice.parentElement.textContent.trim();
+    st.poll_tally = st.poll_tally || {};
+    st.poll_tally[st.poll_voted] = (st.poll_tally[st.poll_voted] || 0) + 1;
+    window.__dt.save(st);
+    flash('Vote recorded.');
+    renderResults();
+  });
+  function renderResults() {
+    const st = window.__dt.load();
+    if (!st.poll_voted) return;
+    const tally = st.poll_tally || {};
+    const total = Object.values(tally).reduce((a,b) => a+b, 0) || 1;
+    let html = '<div style="font-family:Oswald,sans-serif;letter-spacing:1px;color:var(--text-dark);">YOUR PICK: <b>' + st.poll_voted + '</b></div>';
+    Object.entries(tally).forEach(([k, v]) => {
+      const pct = Math.round(100 * v / total);
+      html += '<div style="margin-top:6px;font-size:12px;color:var(--text-dark);">' + k +
+              '<div style="background:#cfe2e8;height:8px;margin-top:2px;"><div style="width:' + pct + '%;background:var(--green);height:100%;"></div></div></div>';
+    });
+    card.querySelector('h4').insertAdjacentHTML('afterend', '<div class="poll-results">' + html + '</div>');
+    btn.disabled = true; btn.textContent = 'VOTED';
+    radios.forEach(r => r.disabled = true);
+    const old = card.querySelector('.poll-results + .poll-results');
+    if (old) old.remove();
+  }
+}
+
+/* ====================================================================
+   DUEL — pick 3 cards, fight an AI deck, win coins + bonus card on streaks.
+   Reuses window.runBattle() from the simulator.
+   ==================================================================== */
+function pickAIDeck() {
+  return window.CARDS.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+}
+
 function initDuel() {
+  const tbody = document.getElementById('duelLobby');
+  if (!tbody) return;
+  ONLINE_PLAYERS.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + p.name + '</td><td>' + p.rank + '</td><td>' + p.deck + '</td>' +
+                   '<td><button class="play" data-name="' + p.name + '">DUEL</button></td>';
+    tbody.appendChild(tr);
+  });
+  tbody.addEventListener('click', e => {
+    const btn = e.target.closest('button.play');
+    if (!btn) return;
+    openDuelTeamPicker(btn.dataset.name);
+  });
+
+  const s = window.__dt.load();
+  const streakNote = document.createElement('p');
+  streakNote.style.cssText = 'color:#cfe2e8;letter-spacing:1px;margin-top:8px;';
+  streakNote.innerHTML = 'Wins: <b>' + (s.duelsWon || 0) + '</b> &nbsp; Streak: <b>' + (s.duelStreak || 0) + '</b> &nbsp; (Win 5 in a row for a bonus card.)';
+  document.querySelector('.lobby-list').appendChild(streakNote);
+}
+
+function openDuelTeamPicker(opponentName) {
+  const inv = (window.__dt.load().inventory || []).filter(id => window.CARD_BY_ID[id]);
+  const unique = Array.from(new Set(inv));
+  if (unique.length < 3) { alert('You need at least 3 unique cards to duel. Open a pack first!'); return; }
+
+  const modal = document.createElement('div');
+  modal.className = 'duel-modal';
+  modal.innerHTML =
+    '<div class="duel-stage">' +
+    '<h2 style="margin:0 0 8px;font-family:Oswald,sans-serif;letter-spacing:3px;color:#fff;">vs ' + opponentName + ' &mdash; PICK YOUR 3</h2>' +
+    '<p style="color:#cfe2e8;margin:0 0 12px;">Click 3 cards from your binder to take into the ring. SPD goes first.</p>' +
+    '<div class="duel-pick"></div>' +
+    '<div class="duel-actions">' +
+    '<button class="duel-go" disabled>FIGHT (0/3)</button>' +
+    '<button class="duel-cancel">CANCEL</button>' +
+    '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  const pickHost = modal.querySelector('.duel-pick');
+  const goBtn    = modal.querySelector('.duel-go');
+  const cancelBtn= modal.querySelector('.duel-cancel');
+  let chosen = [];
+
+  unique.forEach(id => {
+    const card = window.CARD_BY_ID[id];
+    const t = window.buildCardToon(card, { size: 95, showStats: true });
+    t.style.cursor = 'pointer';
+    t.addEventListener('click', () => {
+      const i = chosen.indexOf(id);
+      if (i >= 0) { chosen.splice(i,1); t.classList.remove('chosen'); }
+      else if (chosen.length < 3) { chosen.push(id); t.classList.add('chosen'); }
+      goBtn.disabled = chosen.length !== 3;
+      goBtn.textContent = 'FIGHT (' + chosen.length + '/3)';
+    });
+    pickHost.appendChild(t);
+  });
+  cancelBtn.addEventListener('click', () => modal.remove());
+  goBtn.addEventListener('click', () => {
+    const myDeck = chosen.map(id => window.CARD_BY_ID[id]);
+    const aiDeck = pickAIDeck();
+    modal.remove();
+    runDuel(myDeck, aiDeck, opponentName);
+  });
+}
+
+function runDuel(myDeck, aiDeck, opponentName) {
+  const result = window.runBattle(myDeck, aiDeck, 20);
+  const win = result.winner === 'A';
+
+  const s = window.__dt.load();
+  if (win) {
+    s.duelsWon = (s.duelsWon || 0) + 1;
+    s.duelStreak = (s.duelStreak || 0) + 1;
+    s.maxStreak = Math.max(s.maxStreak || 0, s.duelStreak);
+    s.coins += 100; // $1.00 base
+    let bonusMsg = '+ $1.00 prize';
+    if (s.duelStreak % 5 === 0) {
+      // Bonus random card on every 5th win.
+      const rarity = ['rare','rare','epic','legendary'][Math.floor(Math.random()*4)];
+      const pool = window.CARDS_BY_RARITY[rarity];
+      const card = pool[Math.floor(Math.random() * pool.length)];
+      s.inventory.push(card.id);
+      bonusMsg += ' + bonus ' + rarity.toUpperCase() + ' card: ' + card.name;
+    }
+    window.__dt.save(s);
+    setTimeout(() => flash('VICTORY ' + bonusMsg), 1600);
+  } else if (result.winner === 'B') {
+    s.duelsLost = (s.duelsLost || 0) + 1;
+    s.duelStreak = 0;
+    window.__dt.save(s);
+  }
+
+  const modal = document.createElement('div');
+  modal.className = 'duel-modal';
+  const headerCls = win ? 'win' : (result.winner === 'B' ? 'lose' : 'draw');
+  const headerTxt = win ? 'VICTORY' : (result.winner === 'B' ? 'DEFEAT' : 'DRAW');
+  modal.innerHTML =
+    '<div class="duel-stage">' +
+    '<h1 class="duel-result ' + headerCls + '">' + headerTxt + '</h1>' +
+    '<div style="color:#cfe2e8;margin-bottom:8px;">vs ' + opponentName + '</div>' +
+    '<pre class="duel-log">' + result.log.join('\n').replace(/</g,'&lt;') + '</pre>' +
+    '<button class="duel-close">CLOSE</button>' +
+    '</div>';
+  document.body.appendChild(modal);
+  modal.querySelector('.duel-close').addEventListener('click', () => { modal.remove(); window.location.reload(); });
+  setTimeout(checkAchievements, 200);
+}
+
+/* Original drag-and-drop duel kept around as a free-form sandbox; the real
+   duel flow is the modal above triggered from the lobby. We expose it as a
+   no-op fallback so legacy DOM doesn't error. */
+function _initDuelLegacy() {
   const tbody = document.getElementById('duelLobby');
   ONLINE_PLAYERS.forEach(p => {
     const tr = document.createElement('tr');
@@ -291,44 +604,80 @@ function initDuel() {
   });
 }
 
-/* ---- My Orbit drag/drop ---- */
+/* ---- My Orbit drag/drop with persistence + real cards ---- */
 function initOrbit() {
   const tray = document.getElementById('orbitTray');
   const scenes = document.querySelectorAll('.orbit-scene');
+  if (!tray || !scenes.length || !window.CARD_BY_ID) return;
 
-  document.querySelectorAll('.toon[draggable]').forEach(t => {
-    t.addEventListener('dragstart', e => {
-      e.dataTransfer.setData('text/plain', t.dataset.art);
-      e.dataTransfer.setData('source-id', t.id || '');
-    });
+  // Replace placeholder tray cards with the player's actual inventory (unique).
+  tray.innerHTML = '';
+  const inv = (window.__dt.load().inventory || []).filter(id => window.CARD_BY_ID[id]);
+  Array.from(new Set(inv)).forEach(id => {
+    const t = window.buildCardToon(id, { size: 88, draggable: true });
+    t.dataset.cardId = id;
+    t.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', id));
+    tray.appendChild(t);
+  });
+
+  // Restore saved placements.
+  const placements = (window.__dt.load().orbitPlacements || []);
+  placements.forEach(p => {
+    const scene = document.querySelector('.orbit-scene[data-scene="' + p.scene + '"]');
+    if (scene) addPlaced(scene, p.id, p.x, p.y);
   });
 
   scenes.forEach(scene => {
-    scene.addEventListener('dragover', e => { e.preventDefault(); scene.classList.add('over'); });
+    scene.addEventListener('dragover',  e => { e.preventDefault(); scene.classList.add('over'); });
     scene.addEventListener('dragleave', () => scene.classList.remove('over'));
     scene.addEventListener('drop', e => {
       e.preventDefault();
       scene.classList.remove('over');
-      const art = e.dataTransfer.getData('text/plain');
-      if (!art) return;
+      const id = e.dataTransfer.getData('text/plain');
+      if (!id || !window.CARD_BY_ID[id]) return;
       const rect = scene.getBoundingClientRect();
       const x = e.clientX - rect.left - 44;
       const y = e.clientY - rect.top - 44;
-      const placed = document.createElement('div');
-      placed.className = 'placed-toon toon t' + ((scene.children.length % 6) + 1);
-      placed.style.left = x + 'px';
-      placed.style.top = y + 'px';
-      placed.dataset.art = art;
-      placed.textContent = art.replace(/-/g,' ').toUpperCase();
-      placed.style.fontSize = '10px';
-      placed.title = 'Right-click to remove';
-      placed.addEventListener('contextmenu', ev => { ev.preventDefault(); placed.remove(); });
-      scene.appendChild(placed);
+      addPlaced(scene, id, x, y);
+      savePlacements();
+      setTimeout(checkAchievements, 100);
     });
   });
 
+  function addPlaced(scene, id, x, y) {
+    const placed = window.buildCardToon(id, { size: 88 });
+    placed.classList.add('placed-toon');
+    placed.style.position = 'absolute';
+    placed.style.left = x + 'px';
+    placed.style.top  = y + 'px';
+    placed.title = 'Right-click to remove';
+    placed.addEventListener('contextmenu', ev => {
+      ev.preventDefault();
+      placed.remove();
+      savePlacements();
+    });
+    scene.appendChild(placed);
+  }
+
+  function savePlacements() {
+    const list = [];
+    scenes.forEach(scene => {
+      const sceneId = scene.dataset.scene;
+      scene.querySelectorAll('.placed-toon').forEach(p => {
+        list.push({
+          scene: sceneId,
+          id:    p.dataset.cardId,
+          x:     parseFloat(p.style.left) || 0,
+          y:     parseFloat(p.style.top)  || 0,
+        });
+      });
+    });
+    const s = window.__dt.load();
+    s.orbitPlacements = list;
+    window.__dt.save(s);
+  }
+
   tray.addEventListener('dragover', e => e.preventDefault());
-  tray.addEventListener('drop', e => { e.preventDefault(); });
 }
 
 /* ---- Zones / arcade ---- */
@@ -509,10 +858,12 @@ function initCollection() {
     if (idx < 0) { flash('You no longer own that card.'); paint(); return; }
     s.inventory.splice(idx, 1);
     s.coins += price;
+    s.cardsSold = (s.cardsSold || 0) + 1;
     window.__dt.save(s);
     window.__dt.paintWallet();
     flash('Sold ' + card.name + ' for +$' + (price/100).toFixed(2));
     paint();
+    setTimeout(checkAchievements, 100);
   }
 
   document.querySelectorAll('.market-controls button[data-rar]').forEach(b => {
@@ -574,6 +925,9 @@ function initMarket() {
   });
   document.getElementById('marketSort').addEventListener('change', e => { activeSort = e.target.value; paint(); });
   document.getElementById('marketSearch').addEventListener('input', paint);
+  // If we arrived from the global search, prefill the box.
+  const urlQ = new URLSearchParams(location.search).get('q');
+  if (urlQ) document.getElementById('marketSearch').value = urlQ;
   paint();
 }
 
@@ -650,13 +1004,23 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.dt-logo').forEach(logo => {
     logo.addEventListener('click', () => window.location.href = 'index.html');
   });
+  initGlobalSearch();
+  initPoll();
 });
 
-/* ---- Help / contact ---- */
+/* ---- Help / contact: persists submissions with a ticket number ---- */
 function initHelp() {
-  document.getElementById('helpForm').addEventListener('submit', e => {
+  const form = document.getElementById('helpForm');
+  if (!form) return;
+  form.addEventListener('submit', e => {
     e.preventDefault();
-    document.getElementById('helpResult').textContent = 'MESSAGE SENT — WE WILL GET BACK WITHIN 48H.';
+    const data = Object.fromEntries(new FormData(e.target));
+    const s = window.__dt.load();
+    s.helpTickets = s.helpTickets || [];
+    const id = 'DT-' + String(Date.now()).slice(-6);
+    s.helpTickets.push({ id, ts: Date.now(), ...data });
+    window.__dt.save(s);
+    document.getElementById('helpResult').textContent = 'TICKET ' + id + ' OPENED — WE WILL GET BACK WITHIN 48H.';
     e.target.reset();
   });
 }

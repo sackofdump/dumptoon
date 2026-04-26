@@ -1293,6 +1293,121 @@ footer {
 .sm-card.flipped .sm-front { transform: rotateY(180deg); }
 .sm-card.flipped .sm-back  { transform: rotateY(0); }
 
+/* ===========================================================
+   Achievement toast
+   =========================================================== */
+.achievement-toast {
+  position: fixed; right: 20px; top: 80px;
+  background: linear-gradient(135deg, #f5b827, #b56a10);
+  color: #fff; padding: 14px 18px;
+  display: flex; gap: 12px; align-items: center;
+  border: 3px solid #5a3a00;
+  box-shadow: 0 6px 20px rgba(0,0,0,.5);
+  z-index: 10000; min-width: 280px;
+  transform: translateX(120%); transition: transform .45s cubic-bezier(.2,.8,.4,1.2);
+}
+.achievement-toast.show { transform: translateX(0); }
+.achievement-toast .ach-burst {
+  width: 48px; height: 48px; flex-shrink: 0;
+  background: rgba(255,255,255,.25); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  animation: ach-spin 1.6s linear infinite;
+}
+@keyframes ach-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+.achievement-toast .ach-title { font-family: 'Oswald', sans-serif; letter-spacing: 2px; font-size: 11px; opacity: .85; }
+.achievement-toast .ach-name  { font-family: 'Oswald', sans-serif; letter-spacing: 1.5px; font-size: 18px; }
+.achievement-toast .ach-desc  { font-size: 12px; opacity: .9; margin-top: 2px; }
+
+/* ===========================================================
+   Duel modal — team picker + result screen
+   =========================================================== */
+.duel-modal {
+  position: fixed; inset: 0; z-index: 9998;
+  background: rgba(15,30,40,.96);
+  display: flex; align-items: center; justify-content: center;
+  animation: po-fade .25s ease-out;
+  padding: 20px;
+}
+.duel-stage {
+  background: var(--panel-light); border: 8px solid var(--bg-mid);
+  padding: 18px; max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto;
+}
+.duel-pick {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px; padding: 12px; background: #15485a; min-height: 200px;
+}
+.duel-pick .toon { transition: transform .15s; }
+.duel-pick .toon:hover { transform: scale(1.07); }
+.duel-pick .toon.chosen {
+  outline: 4px solid #f5b827;
+  outline-offset: 2px;
+  transform: scale(1.05);
+}
+.duel-actions {
+  display: flex; gap: 10px; margin-top: 14px; justify-content: center;
+}
+.duel-go, .duel-cancel, .duel-close {
+  padding: 12px 22px; border: none; cursor: pointer;
+  font-family: 'Oswald', sans-serif; letter-spacing: 2px; font-size: 14px;
+}
+.duel-go { background: var(--green); color: #fff; }
+.duel-go:disabled { background: #777; cursor: not-allowed; }
+.duel-cancel, .duel-close { background: var(--red); color: #fff; }
+
+.duel-result {
+  text-align: center; margin: 0 0 8px;
+  font-family: 'Oswald', sans-serif; letter-spacing: 6px; font-size: 56px;
+  text-shadow: 0 4px 0 rgba(0,0,0,.3);
+}
+.duel-result.win  { color: #f5b827; animation: duel-pop .6s ease-out; }
+.duel-result.lose { color: #d6322f; }
+.duel-result.draw { color: #cfe2e8; }
+@keyframes duel-pop {
+  0% { transform: scale(.4); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.duel-log {
+  background: #15485a; color: #cfe2e8; padding: 12px;
+  font-family: 'Consolas', 'Menlo', monospace; font-size: 12px; line-height: 1.5;
+  max-height: 360px; overflow: auto; margin: 12px 0; white-space: pre-wrap;
+}
+
+/* ===========================================================
+   Trash Dash mini-game
+   =========================================================== */
+.td-hud {
+  display: flex; justify-content: space-between; padding: 4px 8px;
+  background: var(--bg-mid); color: #cfe2e8;
+  font-family: 'Oswald', sans-serif; letter-spacing: 2px; font-size: 13px;
+  margin-bottom: 8px;
+}
+.td-arena {
+  position: relative; width: 100%; height: 240px;
+  background: linear-gradient(180deg, #ffd9a8 0%, #f1a04a 70%, #b04e2a 100%);
+  overflow: hidden; cursor: pointer; border: 2px solid #5a3400;
+}
+.td-ground {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 10px;
+  background: #5a3400;
+}
+.td-runner {
+  position: absolute; left: 30px; bottom: 10px;
+  width: 30px; height: 40px;
+  background: radial-gradient(circle at 35% 35%, #cdeefb, #4ea6cc);
+  border: 3px solid #15485a; border-radius: 6px;
+}
+.td-obstacle {
+  position: absolute; bottom: 10px;
+  width: 24px; height: 30px;
+  background: #2c6175; border: 3px solid #15485a;
+  clip-path: polygon(15% 100%, 85% 100%, 100% 30%, 80% 0, 20% 0, 0 30%);
+}
+
+/* Poll results */
+.poll-results { margin-top: 10px; }
+
 /* Simulator page */
 .sim-controls {
   display: flex; align-items: center; gap: 10px;
