@@ -18,10 +18,13 @@
     const s = load();
     document.querySelectorAll('#userCoins').forEach(el => el.textContent = fmt(s.coins));
   }
-  window.__dt = { load, save, fmt, paintWallet };
-
-  // Make flash globally available before DOMContentLoaded handlers below need it.
-  window.__dt = { load, save, fmt, paintWallet };
+  function resetToDefault() {
+    // Clear all dumptoon state — used when entering guest mode so leftover
+    // wallet/inventory from a previous session doesn't persist.
+    try { localStorage.removeItem(KEY); } catch {}
+    paintWallet();
+  }
+  window.__dt = { load, save, fmt, paintWallet, resetToDefault };
 
   document.addEventListener('DOMContentLoaded', () => {
     dailyLoginBonus();

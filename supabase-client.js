@@ -173,7 +173,7 @@
 })();
 
 /* DOMContentLoaded — paint header pill + hook __dt.save → debouncedSyncUp. */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   if (!window.dtAuth) return;
 
   // Wrap __dt.save so every state change pushes to Supabase when signed in.
@@ -186,6 +186,13 @@ document.addEventListener('DOMContentLoaded', () => {
         window.dtAuth.debouncedSyncUp();
       }
     };
+  }
+
+  // Resolve auth state. If guest, clear leftover wallet/inventory so the page
+  // doesn't show "$19.45" from a previous logged-out browse.
+  try { await window.dtAuth.ready(); } catch {}
+  if (!window.dtAuth.getUser() && window.__dt && window.__dt.resetToDefault) {
+    window.__dt.resetToDefault();
   }
 
   function paint(user) {
