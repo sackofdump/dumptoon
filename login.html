@@ -136,9 +136,23 @@
   }
 
   bind('formSignin', async ({email, password}) => {
-    await window.dtAuth.signIn(email, password);
-    show('ok', 'Signed in. Redirecting…');
-    setTimeout(() => window.location.href = 'index.html', 600);
+    try {
+      await window.dtAuth.signIn(email, password);
+      show('ok', 'Signed in. Redirecting…');
+      setTimeout(() => window.location.href = 'index.html', 600);
+    } catch (err) {
+      const m = (err.message || '').toLowerCase();
+      if (m.includes('invalid login credentials')) {
+        show('err',
+          '<b>Invalid login credentials.</b> Common cause: you signed up while ' +
+          '"Confirm email" was on, so the account exists but is unconfirmed. ' +
+          'Fix in Supabase: <b>Authentication → Users → ⋮ on your account → Delete</b>, ' +
+          'then sign up again with confirmation off. ' +
+          'Or run this SQL: <code>update auth.users set email_confirmed_at = now() where email = \'YOUR_EMAIL\';</code>');
+      } else {
+        show('err', err.message || 'Could not sign in.');
+      }
+    }
   });
   bind('formSignup', async ({email, password}) => {
     const data = await window.dtAuth.signUp(email, password);
