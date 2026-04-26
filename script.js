@@ -441,6 +441,91 @@ function animatePackOpen(pack, pulled, onDone) {
   modal.addEventListener('click', e => { if (e.target === modal) close(); });
 }
 
+/* ---- My Collection (collection.html) ---- */
+const SELL_PRICES = { common: 25, rare: 100, epic: 300, legendary: 750 }; // cents
+
+function initCollection() {
+  const grid = document.getElementById('colGrid');
+  if (!grid) return;
+  let activeRarity = 'all';
+
+  function counts() {
+    const inv = (window.__dt.load().inventory || []).filter(id => window.CARD_BY_ID[id]);
+    const map = {};
+    inv.forEach(id => { map[id] = (map[id] || 0) + 1; });
+    return { map, total: inv.length, unique: Object.keys(map).length };
+  }
+
+  function paint() {
+    const c = counts();
+    const search = (document.getElementById('colSearch').value || '').toLowerCase().trim();
+    let entries = Object.entries(c.map);
+
+    let value = 0;
+    entries.forEach(([id, qty]) => { value += SELL_PRICES[window.CARD_BY_ID[id].rarity] * qty; });
+    document.getElementById('colCount').textContent  = c.total;
+    document.getElementById('colUnique').textContent = c.unique;
+    document.getElementById('colValue').textContent  = '$' + (value / 100).toFixed(2);
+
+    if (activeRarity !== 'all') entries = entries.filter(([id]) => window.CARD_BY_ID[id].rarity === activeRarity);
+    if (search) entries = entries.filter(([id]) => window.CARD_BY_ID[id].name.toLowerCase().includes(search));
+    const rarityOrder = { common: 0, rare: 1, epic: 2, legendary: 3 };
+    entries.sort((a, b) => {
+      const ca = window.CARD_BY_ID[a[0]], cb = window.CARD_BY_ID[b[0]];
+      return rarityOrder[ca.rarity] - rarityOrder[cb.rarity] || ca.name.localeCompare(cb.name);
+    });
+
+    grid.innerHTML = '';
+    if (!entries.length) {
+      grid.innerHTML = '<div class="col-empty" style="grid-column:1/-1;">No cards in this view. Crack a pack from <b>GET CARDS</b> to start collecting.</div>';
+      return;
+    }
+    entries.forEach(([id, qty]) => {
+      const card = window.CARD_BY_ID[id];
+      const cell = document.createElement('div');
+      cell.className = 'col-card';
+      const price = SELL_PRICES[card.rarity];
+      cell.innerHTML = `
+        <span class="qty">×${qty}</span>
+        <div class="toon-mount"></div>
+        <h4>${card.name}</h4>
+        <div class="role" style="font-size:11px;color:var(--text-muted);letter-spacing:1px;margin:2px 0 6px;">
+          ${card.rarity.toUpperCase()} &middot; HP ${card.hp} ATK ${card.atk} SPD ${card.spd}
+        </div>
+        <button class="sell" data-id="${id}">SELL FOR $${(price/100).toFixed(2)}</button>`;
+      cell.querySelector('.toon-mount').replaceWith(window.buildCardToon(card));
+      cell.querySelector('.sell').addEventListener('click', () => sellOne(id));
+      grid.appendChild(cell);
+    });
+  }
+
+  function sellOne(id) {
+    const card = window.CARD_BY_ID[id];
+    if (!card) return;
+    const price = SELL_PRICES[card.rarity];
+    if (!confirm(`Sell ONE copy of ${card.name} for $${(price/100).toFixed(2)}?`)) return;
+    const s = window.__dt.load();
+    const idx = (s.inventory || []).indexOf(id);
+    if (idx < 0) { flash('You no longer own that card.'); paint(); return; }
+    s.inventory.splice(idx, 1);
+    s.coins += price;
+    window.__dt.save(s);
+    window.__dt.paintWallet();
+    flash('Sold ' + card.name + ' for +$' + (price/100).toFixed(2));
+    paint();
+  }
+
+  document.querySelectorAll('.market-controls button[data-rar]').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.market-controls button[data-rar]').forEach(x => x.classList.toggle('active', x === b));
+      activeRarity = b.dataset.rar;
+      paint();
+    });
+  });
+  document.getElementById('colSearch').addEventListener('input', paint);
+  paint();
+}
+
 /* ---- Card market (cards-market.html) ---- */
 function initMarket() {
   const grid = document.getElementById('marketGrid');
@@ -526,19 +611,26 @@ function redeemCode(raw) {
 }
 
 function initFeaturedCode() {
-  const codeEl = document.getElementById('featuredCode');
-  if (codeEl) codeEl.addEventListener('click', () => {
-    const txt = codeEl.querySelector('.code');
-    if (txt) redeemCode(txt.textContent);
-  });
-  // "GOT A CODE?" input + SUBMIT button in the member-bar
+  // Featured code pill is display-only — the player must type the code into
+  // the GOT A CODE? input and hit SUBMIT (or press Enter) to redeem.
   const submit = document.querySelector('.member-bar .submit');
   const input  = document.querySelector('.member-bar .got-code input');
-  if (submit && input) submit.addEventListener('click', () => {
-    redeemCode(input.value);
-    input.value = '';
-  });
+  if (!submit || !input) return;
+  function go() { redeemCode(input.value); input.value = ''; }
+  submit.addEventListener('click', go);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
 }
+
+/* ---- Responsive zoom: scale the fixed 1280-design page to fit narrower windows ---- */
+function applyResponsiveZoom() {
+  const DESIGN_WIDTH = 1280;
+  const w = window.innerWidth;
+  const scale = w >= DESIGN_WIDTH ? 1 : Math.max(0.45, w / DESIGN_WIDTH);
+  // 'zoom' works in Chromium, Safari, and Firefox 126+. Falls back to no-op elsewhere.
+  document.body.style.zoom = scale;
+}
+window.addEventListener('resize', applyResponsiveZoom);
+document.addEventListener('DOMContentLoaded', applyResponsiveZoom);
 
 /* ---- Global nav button routing + DT logo back-to-home ---- */
 document.addEventListener('DOMContentLoaded', () => {

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dumptoon — My Collection</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .col-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+  }
+  .col-card {
+    background: var(--panel-light); border: 6px solid var(--bg-mid);
+    padding: 12px; display: flex; flex-direction: column; align-items: center;
+    position: relative;
+  }
+  .col-card .toon { width: 130px; height: 130px; margin-bottom: 6px; }
+  .col-card h4 {
+    margin: 0; font-family: 'Oswald', sans-serif; letter-spacing: 1px;
+    color: var(--text-dark); text-align: center; font-size: 14px;
+  }
+  .col-card .qty {
+    position: absolute; top: 6px; right: 6px;
+    background: var(--bg-mid); color: #cfe2e8;
+    padding: 2px 8px; border-radius: 10px;
+    font-family: 'Oswald', sans-serif; letter-spacing: 1px; font-size: 12px;
+  }
+  .col-card .sell {
+    margin-top: 8px; width: 100%;
+    background: var(--orange); color: #fff; border: none;
+    font-family: 'Oswald', sans-serif; letter-spacing: 2px; font-size: 13px;
+    padding: 8px; cursor: pointer;
+  }
+  .col-card .sell:hover { filter: brightness(1.1); }
+  .col-card .sell:disabled { background: #999; cursor: not-allowed; }
+  .col-empty {
+    background: var(--panel-light); border: 6px solid var(--bg-mid);
+    padding: 36px; text-align: center; color: var(--text-dark);
+  }
+  .col-summary {
+    background: var(--panel-light); border: 6px solid var(--bg-mid);
+    padding: 12px 16px; margin-bottom: 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    color: var(--text-dark); font-family: 'Oswald', sans-serif; letter-spacing: 1px;
+  }
+  .col-summary .total { font-size: 20px; color: var(--green); }
+</style>
+</head>
+<body>
+<div class="top-ad">AD &middot; 728 &times; 90</div>
+
+<div class="page">
+  <div class="dt-header">
+    <div class="dt-logo"><span class="small">DUMPTOON</span><span class="big">DT</span><span class="tag">NETWORK</span></div>
+    <nav class="dt-nav">
+      <button class="nav-btn red">GAMES</button>
+      <button class="nav-btn blue">TV SHOWS</button>
+      <button class="nav-btn green">TRADING CARDS</button>
+      <button class="nav-btn orange">SHOP</button>
+    </nav>
+    <div class="dt-search">
+      <div class="dt-search-row"><label>SEARCH:</label><input type="text" id="colSearch" /><button class="go-btn">GO</button></div>
+    </div>
+  </div>
+
+  <div class="orbit-bar">
+    <div class="brand"><span class="o-icon"></span><em>ORBIT&reg;</em> MY COLLECTION</div>
+    <div class="signed-in"><span>SIGNED IN AS</span><span class="pill" id="userPill">guest &middot; <span id="userCoins">$5.00</span></span><button class="logout">LOGIN</button></div>
+  </div>
+
+  <div class="main-grid">
+    <aside class="sidebar">
+      <a class="side-tab" href="get-cards.html">GET CARDS</a>
+      <a class="side-tab" href="cards-market.html">CARD MARKET</a>
+      <a class="side-tab active" href="collection.html">MY COLLECTION</a>
+      <a class="side-tab" href="play-dtoons.html">PLAY dTOONS</a>
+      <a class="side-tab" href="my-orbit.html">MY ORBIT</a>
+      <a class="side-tab" href="visit-dzones.html">VISIT dZONES</a>
+      <a class="side-tab" href="orbit-help.html">ORBIT HELP</a>
+      <a class="side-tab" href="trade.html" style="background:var(--orange);">TRADE</a>
+      <div class="ad-slot">AD</div>
+    </aside>
+
+    <main class="center">
+      <div class="page-title">MY COLLECTION &middot; OWNED CARDS</div>
+
+      <div class="col-summary">
+        <span>OWNED: <b id="colCount">0</b> cards (<b id="colUnique">0</b> unique)</span>
+        <span>SELL VALUE: <span class="total" id="colValue">$0.00</span></span>
+      </div>
+
+      <div class="market-controls">
+        <span style="color:var(--text-dark);font-family:Oswald,sans-serif;letter-spacing:2px;font-size:12px;">RARITY:</span>
+        <button data-rar="all" class="active">ALL</button>
+        <button data-rar="common">COMMON</button>
+        <button data-rar="rare">RARE</button>
+        <button data-rar="epic">EPIC</button>
+        <button data-rar="legendary">LEGENDARY</button>
+        <span style="margin-left:auto;color:var(--text-muted);font-size:12px;">Sell prices: Common $0.25 · Rare $1.00 · Epic $3.00 · Legendary $7.50</span>
+      </div>
+
+      <div class="col-grid" id="colGrid"></div>
+    </main>
+
+    <aside class="right-rail">
+      <div class="tip-card">
+        <h4>How selling works</h4>
+        <p>Each card sells for about half of its pack-store value. One copy at a time. The card vanishes from your binder after the sale.</p>
+      </div>
+      <div class="news-card">
+        <h4>Need cards?</h4>
+        <p>Open packs in <b>GET CARDS</b> or trade with another Orbiter.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<footer>DUMPTOON DT NETWORK &middot; MY COLLECTION</footer>
+<script src="cards.js"></script>
+<script src="card-art.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="config.local.js" onerror="console.info('No config.local.js')"></script>
+<script src="supabase-client.js"></script>
+<script src="script.js"></script>
+<script>initCollection();</script>
+</body>
+</html>
