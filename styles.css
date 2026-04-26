@@ -81,6 +81,7 @@ a { color: inherit; text-decoration: none; }
   height: 100px;
   overflow: hidden;
 }
+.dt-logo { cursor: pointer; }
 .dt-logo {
   width: 180px;
   background: var(--bg-deep);
@@ -223,14 +224,15 @@ a { color: inherit; text-decoration: none; }
   box-shadow: inset 0 -12px 20px rgba(0,0,0,.25), inset 0 12px 16px rgba(255,255,255,.45);
   cursor: pointer;
 }
-.show-tile.s1 { background: #ff6b5a; }
-.show-tile.s2 { background: #f4d255; }
-.show-tile.s3 { background: #6ec85a; }
-.show-tile.s4 { background: #4ec3d3; }
-.show-tile.s5 { background: #5187d6; }
-.show-tile.s6 { background: #8a72d6; }
-.show-tile.s7 { background: #e074c2; }
-.show-tile.s8 { background: #ec8b3a; }
+.show-tile { background-size: cover; background-position: center; }
+.show-tile.s1 { background-image: url('Assets/Shows/s1.png'), linear-gradient(135deg,#ff6b5a,#a73122); }
+.show-tile.s2 { background-image: url('Assets/Shows/s2.png'), linear-gradient(135deg,#f4d255,#a07012); }
+.show-tile.s3 { background-image: url('Assets/Shows/s3.png'), linear-gradient(135deg,#6ec85a,#2e6f24); }
+.show-tile.s4 { background-image: url('Assets/Shows/s4.png'), linear-gradient(135deg,#4ec3d3,#1d4c70); }
+.show-tile.s5 { background-image: url('Assets/Shows/s5.png'), linear-gradient(135deg,#5187d6,#283f7a); }
+.show-tile.s6 { background-image: url('Assets/Shows/s6.png'), linear-gradient(135deg,#8a72d6,#3a2c70); }
+.show-tile.s7 { background-image: url('Assets/Shows/s7.png'), linear-gradient(135deg,#e074c2,#7a1f60); }
+.show-tile.s8 { background-image: url('Assets/Shows/s8.png'), linear-gradient(135deg,#ec8b3a,#7a3a10); }
 .tv-strip .all-shows {
   width: 170px;
   text-align: center;
@@ -809,12 +811,13 @@ a { color: inherit; text-decoration: none; }
   font-size: 16px;
   text-shadow: 0 2px 4px rgba(0,0,0,.4);
 }
-.zone .scene.z1 { background: linear-gradient(180deg, #ffb46e, #b04e2a); }
-.zone .scene.z2 { background: linear-gradient(180deg, #6ec4d9, #2c6088); }
-.zone .scene.z3 { background: linear-gradient(180deg, #b3e070, #4d8a3c); }
-.zone .scene.z4 { background: linear-gradient(180deg, #2b1f4a, #7a2c8a); }
-.zone .scene.z5 { background: linear-gradient(180deg, #fdd47b, #d68b30); }
-.zone .scene.z6 { background: linear-gradient(180deg, #d6d6e8, #3f3f5a); }
+.zone .scene { background-size: cover; background-position: center; color: transparent; }
+.zone .scene.z1 { background-image: url('Assets/Zones/garage.png'),  linear-gradient(180deg,#ffb46e,#b04e2a); } /* DUMP TOWN */
+.zone .scene.z2 { background-image: url('Assets/Zones/beach.png'),   linear-gradient(180deg,#6ec4d9,#2c6088); } /* SPLASH BAY */
+.zone .scene.z3 { background-image: url('Assets/Zones/cmart.png'),   linear-gradient(180deg,#b3e070,#4d8a3c); } /* GRASS GULCH */
+.zone .scene.z4 { background-image: url('Assets/Zones/lab.png'),     linear-gradient(180deg,#2b1f4a,#7a2c8a); } /* CREEP CASTLE */
+.zone .scene.z5 { background-image: url('Assets/Zones/kitchen.png'), linear-gradient(180deg,#fdd47b,#d68b30); } /* SUN STRIP */
+.zone .scene.z6 { background-image: url('Assets/Zones/arcade.png'),  linear-gradient(180deg,#d6d6e8,#3f3f5a); } /* MOON BASE */
 .zone h3 {
   margin: 0;
   font-family: 'Oswald', sans-serif;
@@ -982,28 +985,29 @@ footer {
   display: flex; flex-direction: column; gap: 10px;
 }
 .pack .art {
-  height: 200px;
+  /* Real trading-card pack proportions: 5:7 portrait. */
+  aspect-ratio: 5 / 7;
+  width: 170px;
+  height: auto;
+  margin: 0 auto;
   border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
-  color: #fff;
+  color: transparent; /* placeholder labels hidden by default — art carries the design */
   font-family: 'Oswald', sans-serif;
   letter-spacing: 2px;
   font-size: 16px;
   text-shadow: 0 2px 4px rgba(0,0,0,.4);
   position: relative;
   overflow: hidden;
+  background-size: cover;
+  background-position: center;
 }
-.pack .art.starter   { background: linear-gradient(135deg, #6ec85a, #2e6f24); }
-.pack .art.booster   { background: linear-gradient(135deg, #5fa8d8, #1d4c70); }
-.pack .art.holo      {
-  background:
-    url('Assets/Packs/holo.png') center/cover no-repeat,
-    linear-gradient(135deg, #ff97b8, #6a1880, #3a82c4);
-  color: transparent; /* hide the placeholder text once art is in */
-}
-.pack .art.mystery   { background: linear-gradient(135deg, #2a2a4a, #6b3aa0); }
-.pack .art.legendary { background: linear-gradient(135deg, #f5b827, #b56a10); }
-.pack .art.bundle    { background: linear-gradient(135deg, #d6322f, #6a1010); }
+.pack .art.starter   { background-image: url('Assets/Packs/starter.png'),   linear-gradient(135deg, #6ec85a, #2e6f24); }
+.pack .art.booster   { background-image: url('Assets/Packs/booster.png'),   linear-gradient(135deg, #5fa8d8, #1d4c70); }
+.pack .art.mystery   { background-image: url('Assets/Packs/mystery.png'),   linear-gradient(135deg, #2a2a4a, #6b3aa0); }
+.pack .art.holo      { background-image: url('Assets/Packs/holo.png'),      linear-gradient(135deg, #ff97b8, #6a1880, #3a82c4); }
+.pack .art.bundle    { background-image: url('Assets/Packs/bundle.png'),    linear-gradient(135deg, #d6322f, #6a1010); }
+.pack .art.legendary { background-image: url('Assets/Packs/legendary.png'), linear-gradient(135deg, #f5b827, #b56a10); }
 .pack h3 {
   margin: 0;
   font-family: 'Oswald', sans-serif;
@@ -1136,12 +1140,12 @@ footer {
 }
 
 /* Pack art per design — uses the same gradients as the store tiles. */
-.pack-open-pack.pack-art-starter   { background-image: linear-gradient(135deg, #6ec85a, #2e6f24); }
-.pack-open-pack.pack-art-booster   { background-image: linear-gradient(135deg, #5fa8d8, #1d4c70); }
-.pack-open-pack.pack-art-mystery   { background-image: linear-gradient(135deg, #2a2a4a, #6b3aa0); }
-.pack-open-pack.pack-art-holo      { background-image: url('Assets/Packs/holo.png'), linear-gradient(135deg, #ff97b8, #6a1880, #3a82c4); }
-.pack-open-pack.pack-art-bundle    { background-image: linear-gradient(135deg, #d6322f, #6a1010); }
-.pack-open-pack.pack-art-legendary { background-image: linear-gradient(135deg, #f5b827, #b56a10); }
+.pack-open-pack.pack-art-starter   { background-image: url('Assets/Packs/starter.png'),   linear-gradient(135deg, #6ec85a, #2e6f24); }
+.pack-open-pack.pack-art-booster   { background-image: url('Assets/Packs/booster.png'),   linear-gradient(135deg, #5fa8d8, #1d4c70); }
+.pack-open-pack.pack-art-mystery   { background-image: url('Assets/Packs/mystery.png'),   linear-gradient(135deg, #2a2a4a, #6b3aa0); }
+.pack-open-pack.pack-art-holo      { background-image: url('Assets/Packs/holo.png'),      linear-gradient(135deg, #ff97b8, #6a1880, #3a82c4); }
+.pack-open-pack.pack-art-bundle    { background-image: url('Assets/Packs/bundle.png'),    linear-gradient(135deg, #d6322f, #6a1010); }
+.pack-open-pack.pack-art-legendary { background-image: url('Assets/Packs/legendary.png'), linear-gradient(135deg, #f5b827, #b56a10); }
 
 .pack-half {
   position: absolute; left: -4px; right: -4px;

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1280" />
+<title>Dumptoon — Zone</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .zone-hero {
+    height: 320px; background-size: cover; background-position: center;
+    border: 8px solid var(--bg-mid); position: relative;
+    display: flex; align-items: flex-end;
+  }
+  .zone-hero .label {
+    background: rgba(15,30,40,.78); color: #fff;
+    padding: 14px 24px; font-family: 'Oswald', sans-serif;
+    letter-spacing: 4px; font-size: 32px; margin: 0;
+  }
+  .zone-blurb {
+    background: var(--panel-light); border: 6px solid var(--bg-mid);
+    padding: 14px 18px; margin-top: 12px; color: var(--text-dark);
+  }
+  .zone-back {
+    background: var(--bg-mid); color: #cfe2e8; border: none;
+    padding: 8px 18px; font-family: 'Oswald', sans-serif; letter-spacing: 2px;
+    cursor: pointer; margin-bottom: 10px;
+  }
+  .zone-cmt { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="top-ad">AD &middot; 728 &times; 90</div>
+
+<div class="page">
+  <div class="dt-header">
+    <div class="dt-logo"><span class="small">DUMPTOON</span><span class="big">DT</span><span class="tag">NETWORK</span></div>
+    <nav class="dt-nav">
+      <button class="nav-btn red">GAMES</button>
+      <button class="nav-btn blue">TV SHOWS</button>
+      <button class="nav-btn green">TRADING CARDS</button>
+      <button class="nav-btn orange">SHOP</button>
+    </nav>
+  </div>
+
+  <div class="orbit-bar">
+    <div class="brand"><span class="o-icon"></span><em>ORBIT&reg;</em> dZONE</div>
+    <div class="signed-in"><span>SIGNED IN AS</span><span class="pill" id="userPill">guest &middot; <span id="userCoins">$5.00</span></span><button class="logout">LOGIN</button></div>
+  </div>
+
+  <div class="main-grid">
+    <aside class="sidebar">
+      <a class="side-tab" href="get-cards.html">GET CARDS</a>
+      <a class="side-tab" href="play-dtoons.html">PLAY dTOONS</a>
+      <a class="side-tab" href="my-orbit.html">MY ORBIT</a>
+      <a class="side-tab active" href="visit-dzones.html">VISIT dZONES</a>
+      <a class="side-tab" href="orbit-help.html">ORBIT HELP</a>
+      <a class="side-tab" href="trade.html" style="background:var(--orange);">TRADE</a>
+      <div class="ad-slot">AD</div>
+    </aside>
+
+    <main class="center">
+      <button class="zone-back" onclick="location.href='visit-dzones.html'">&laquo; BACK TO ALL dZONES</button>
+      <div class="zone-hero" id="zoneHero"><h2 class="label" id="zoneTitle">—</h2></div>
+      <div class="zone-blurb" id="zoneBlurb">Loading…</div>
+
+      <div class="page-title" style="margin-top:14px;">ZONE ARCADE</div>
+      <div class="arcade-grid" id="zoneArcade"></div>
+    </main>
+
+    <aside class="right-rail">
+      <div class="news-card">
+        <h4>Daily Bonus</h4>
+        <p>First zone visit each day pays out 3&cent;. Don't forget to log in.</p>
+      </div>
+      <div class="tip-card">
+        <h4>About Zones</h4>
+        <p>Each zone hosts a different mini-game lineup. New zones unlock as the dToon Network grows.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<footer>DUMPTOON DT NETWORK &middot; dZONE PAGE</footer>
+<script src="cards.js"></script>
+<script src="card-art.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="config.local.js" onerror="console.info('No config.local.js')"></script>
+<script src="supabase-client.js"></script>
+<script src="script.js"></script>
+<script src="games.js"></script>
+<script>initZonePage();</script>
+</body>
+</html>

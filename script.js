@@ -332,27 +332,64 @@ function initOrbit() {
 }
 
 /* ---- Zones / arcade ---- */
+const ZONE_DATA = {
+  'dump-town':    { name: 'DUMP TOWN',    bg: 'Assets/Zones/garage.png',  blurb: 'A junkyard wonderland. Sift the trash heap for coins, dodge the raccoons.', games: ['coin-crusher','trash-dash'] },
+  'splash-bay':   { name: 'SPLASH BAY',   bg: 'Assets/Zones/beach.png',   blurb: 'Sun, surf, and falling jellies. Catch them in your bucket — avoid the bombs.', games: ['jelly-fall'] },
+  'grass-gulch':  { name: 'GRASS GULCH',  bg: 'Assets/Zones/cmart.png',   blurb: 'Sleepy plains, snacks at the cMart. Tap the matching dToons before time’s up.', games: ['coin-crusher'] },
+  'creep-castle': { name: 'CREEP CASTLE', bg: 'Assets/Zones/lab.png',     blurb: 'Spooky lab. Memory match for holo card chances.', games: ['spook-match'] },
+  'sun-strip':    { name: 'SUN STRIP',    bg: 'Assets/Zones/kitchen.png', blurb: 'Boardwalk diner zone. Two arcade cabinets hot off the grill.', games: ['jelly-fall','coin-crusher'] },
+  'moon-base':    { name: 'MOON BASE',    bg: 'Assets/Zones/arcade.png',  blurb: 'Neon arcade in low-grav. Daily login bonus drops here.', games: ['coin-crusher','spook-match'] },
+};
+
 function initZones() {
+  // Clicking a zone tile now travels to that zone's page (no money payout).
   document.querySelectorAll('.zone').forEach(z => {
+    z.style.cursor = 'pointer';
     z.addEventListener('click', () => {
-      const s = window.__dt.load();
-      const cents = 10 + Math.floor(Math.random() * 21); // 10-30 cents
-      s.coins += cents;
-      window.__dt.save(s);
-      window.__dt.paintWallet();
-      flash('+' + window.__dt.fmt(cents) + ' from ' + z.querySelector('h3').textContent);
+      const id = z.dataset.zone;
+      if (id) window.location.href = 'zone.html?id=' + encodeURIComponent(id);
     });
   });
-  document.querySelectorAll('.play-arcade').forEach(b => {
-    b.addEventListener('click', e => {
-      e.stopPropagation();
-      const game = b.dataset.game;
-      const s = window.__dt.load();
-      const cents = 50 + Math.floor(Math.random() * 151); // 50 - 200 cents
-      s.coins += cents;
-      window.__dt.save(s);
-      window.__dt.paintWallet();
-      flash(game.toUpperCase() + ' payout: +' + window.__dt.fmt(cents));
+  // Arcade PLAY buttons are bound by games.js (capture phase). Nothing else here.
+}
+
+function initZonePage() {
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+  const data = ZONE_DATA[id];
+  if (!data) {
+    document.getElementById('zoneTitle').textContent = 'UNKNOWN ZONE';
+    document.getElementById('zoneBlurb').textContent = 'No zone selected. Head back to the dZones list.';
+    return;
+  }
+  document.getElementById('zoneTitle').textContent = data.name;
+  document.getElementById('zoneBlurb').textContent = data.blurb;
+  document.getElementById('zoneHero').style.backgroundImage =
+    `url('${encodeURI(data.bg)}'), linear-gradient(180deg,#2c6175,#15485a)`;
+
+  const arcade = document.getElementById('zoneArcade');
+  const GAME_LABELS = {
+    'coin-crusher': { name: 'COIN CRUSHER', desc: 'Tap matching dToons before time’s up.' },
+    'jelly-fall':   { name: 'JELLY FALL',   desc: 'Catch jellies, dodge bombs.' },
+    'spook-match':  { name: 'SPOOK MATCH',  desc: 'Memory match with creep cards.' },
+    'trash-dash':   { name: 'TRASH DASH',   desc: 'Side-scroll runner — coming soon.' },
+  };
+  data.games.forEach((g, i) => {
+    const meta = GAME_LABELS[g] || { name: g.toUpperCase(), desc: '' };
+    const card = document.createElement('div');
+    card.className = 'arcade-card';
+    card.innerHTML =
+      `<div class="preview a${(i % 4) + 1}">${meta.name}</div>` +
+      `<div style="font-family:Oswald,sans-serif;letter-spacing:2px;">${meta.name}</div>` +
+      `<p style="font-size:12px;">${meta.desc}</p>` +
+      `<button class="play-arcade" data-game="${g}">PLAY</button>`;
+    arcade.appendChild(card);
+  });
+  // games.js auto-binds .play-arcade in DOMContentLoaded; we're past that, so re-bind.
+  arcade.querySelectorAll('.play-arcade[data-game]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const fn = window.miniGames && window.miniGames[btn.dataset.game];
+      if (fn) fn();
     });
   });
 }
@@ -455,7 +492,7 @@ function initMarket() {
   paint();
 }
 
-/* ---- Global nav button routing ---- */
+/* ---- Global nav button routing + DT logo back-to-home ---- */
 document.addEventListener('DOMContentLoaded', () => {
   const map = {
     'red':    'visit-dzones.html',
@@ -467,6 +504,9 @@ document.addEventListener('DOMContentLoaded', () => {
     Object.entries(map).forEach(([cls, href]) => {
       if (b.classList.contains(cls)) b.addEventListener('click', () => window.location.href = href);
     });
+  });
+  document.querySelectorAll('.dt-logo').forEach(logo => {
+    logo.addEventListener('click', () => window.location.href = 'index.html');
   });
 });
 
