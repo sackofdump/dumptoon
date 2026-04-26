@@ -1391,12 +1391,12 @@ const SIDEBAR_LINKS = [
   { href: 'get-cards.html',     label: 'GET CARDS' },
   { href: 'cards-market.html',  label: 'CARD MARKET' },
   { href: 'collection.html',    label: 'MY COLLECTION' },
-  { href: 'play-dtoons.html',   label: 'PLAY dTOONS' },
+  { href: 'visit-dzones.html',  label: 'PLAY dTOONS' },          // games hub
+  { href: 'play-dtoons.html',   label: 'DUEL ARENA',  style: 'background:var(--red);color:#fff;' },
   { href: 'simulator.html',     label: 'SIMULATOR' },
   { href: 'my-orbit.html',      label: 'MY ORBIT' },
-  { href: 'visit-dzones.html',  label: 'VISIT dZONES' },
   { href: 'orbit-help.html',    label: 'ORBIT HELP' },
-  { href: 'trade.html',         label: 'TRADE',    style: 'background:var(--orange);' },
+  { href: 'trade.html',         label: 'TRADE',       style: 'background:var(--orange);' },
   { href: 'login.html',         label: 'SIGN IN' },
 ];
 
