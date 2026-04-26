@@ -492,8 +492,58 @@ function initMarket() {
   paint();
 }
 
+/* ---- Featured cards on the homepage ---- */
+function initFeatureCircles() {
+  const host = document.getElementById('featureCircles');
+  if (!host || !window.CARDS) return;
+  const ids = (host.dataset.cardIds || '').split(',').map(s => s.trim()).filter(Boolean);
+  const cmart = host.querySelector('.feature-cmart');
+  ids.forEach((id, i) => {
+    const card = window.CARD_BY_ID[id];
+    if (!card) return;
+    const t = window.buildCardToon(card);
+    t.classList.add('t' + ((i % 6) + 1)); // keep position styling from existing CSS
+    host.insertBefore(t, cmart || null);
+  });
+}
+
+/* ---- Featured code redemption (homepage TURKEY = $20, once per browser) ---- */
+const REDEEM_CODES = { 'turkey': { cents: 2000, label: 'TURKEY code' } };
+
+function redeemCode(raw) {
+  const code = (raw || '').trim().toLowerCase();
+  if (!code) return;
+  const def = REDEEM_CODES[code];
+  if (!def) { flash('That code is not valid.'); return; }
+  const s = window.__dt.load();
+  s.codes_redeemed = s.codes_redeemed || [];
+  if (s.codes_redeemed.includes(code)) { flash('Code already redeemed.'); return; }
+  s.codes_redeemed.push(code);
+  s.coins += def.cents;
+  window.__dt.save(s);
+  window.__dt.paintWallet();
+  flash('+$' + (def.cents/100).toFixed(2) + ' from ' + def.label + '!');
+}
+
+function initFeaturedCode() {
+  const codeEl = document.getElementById('featuredCode');
+  if (codeEl) codeEl.addEventListener('click', () => {
+    const txt = codeEl.querySelector('.code');
+    if (txt) redeemCode(txt.textContent);
+  });
+  // "GOT A CODE?" input + SUBMIT button in the member-bar
+  const submit = document.querySelector('.member-bar .submit');
+  const input  = document.querySelector('.member-bar .got-code input');
+  if (submit && input) submit.addEventListener('click', () => {
+    redeemCode(input.value);
+    input.value = '';
+  });
+}
+
 /* ---- Global nav button routing + DT logo back-to-home ---- */
 document.addEventListener('DOMContentLoaded', () => {
+  initFeatureCircles();
+  initFeaturedCode();
   const map = {
     'red':    'visit-dzones.html',
     'blue':   'coming-soon.html',
