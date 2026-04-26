@@ -26,8 +26,29 @@
     if (gameId && !s.gamesPlayed.includes(gameId)) s.gamesPlayed.push(gameId);
     window.__dt.save(s);
     window.__dt.paintWallet();
-    window.flash && window.flash(label + ': +$' + (cents/100).toFixed(2));
     if (window.checkAchievements) setTimeout(window.checkAchievements, 100);
+  }
+
+  // End-of-game screen with running total + Play Again / Close.
+  function showResult(host, headline, subline, totalCents, gameFn) {
+    host.innerHTML =
+      '<div class="game-result">' +
+        '<h2>' + headline + '</h2>' +
+        '<div class="gr-sub">' + subline + '</div>' +
+        '<div class="gr-total">+$' + (totalCents/100).toFixed(2) + '</div>' +
+        '<div class="gr-actions">' +
+          '<button class="gr-replay">PLAY AGAIN</button>' +
+          '<button class="gr-close">CLOSE</button>' +
+        '</div>' +
+      '</div>';
+    host.querySelector('.gr-replay').addEventListener('click', () => {
+      host.innerHTML = '';
+      gameFn(host);
+    });
+    host.querySelector('.gr-close').addEventListener('click', () => {
+      const modal = host.closest('.game-modal');
+      if (modal) modal.remove();
+    });
   }
 
   /* --- COIN CRUSHER — whack-a-toon, 30s --- */
@@ -69,9 +90,9 @@
     const popper = setInterval(pop, 600);
     function end() {
       clearInterval(popper);
-      const cents = score; // 1 cent per hit
+      const cents = score;
       payout(cents, 'Coin Crusher', 'coin-crusher');
-      host.innerHTML = `<h2 style="color:#cfe2e8;text-align:center;">TIME UP — ${score} hits → +$${(cents/100).toFixed(2)}</h2>`;
+      showResult(host, 'TIME UP', score + ' hits', cents, coinCrusher);
     }
   }
 
@@ -128,7 +149,7 @@
       alive = false; clearInterval(spawner);
       const cents = score * 5;
       payout(cents, 'Jelly Fall', 'jelly-fall');
-      host.innerHTML = `<h2 style="color:#cfe2e8;text-align:center;">GAME OVER — ${score} jellies × 5¢ = +$${(cents/100).toFixed(2)}</h2>`;
+      showResult(host, 'GAME OVER', score + ' jellies caught', cents, jellyFall);
     }
     const spawner = setInterval(spawn, 700);
   }
@@ -166,12 +187,9 @@
       }
     }
     function end() {
-      // Best score = 8 moves (perfect). Payout: 200c if perfect, scales down to 30c at 25+ moves.
       const cents = Math.max(30, 200 - (moves - 8) * 10);
       payout(cents, 'Spook Match', 'spook-match');
-      setTimeout(() => {
-        host.innerHTML = `<h2 style="color:#cfe2e8;text-align:center;">CLEARED in ${moves} moves — +$${(cents/100).toFixed(2)}</h2>`;
-      }, 600);
+      setTimeout(() => showResult(host, 'CLEARED', moves + ' moves', cents, spookMatch), 600);
     }
   }
 
@@ -232,9 +250,9 @@
     function end() {
       alive = false;
       document.removeEventListener('keydown', keyHandler);
-      const cents = score; // 1¢ per meter
+      const cents = score;
       payout(cents, 'Trash Dash', 'trash-dash');
-      host.innerHTML = '<h2 style="color:#cfe2e8;text-align:center;">CRASHED at ' + score + 'm — +$' + (cents/100).toFixed(2) + '</h2>';
+      showResult(host, 'CRASHED', score + 'm distance', cents, trashDash);
     }
   }
 

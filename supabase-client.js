@@ -13,7 +13,11 @@
 
   const listeners = new Set();
   let cachedUser = null;
-  let lastSyncedUserId = null; // so we only sync down once per session
+  // Persist across page navigations so we don't max-merge old server state on
+  // every page load (which was making just-sold cards reappear).
+  const SYNC_KEY = 'dumptoon-last-sync-user';
+  function getLastSyncedUserId() { try { return localStorage.getItem(SYNC_KEY); } catch { return null; } }
+  function setLastSyncedUserId(id) { try { id ? localStorage.setItem(SYNC_KEY, id) : localStorage.removeItem(SYNC_KEY); } catch {} }
 
   async function refresh() {
     if (!client) { cachedUser = null; emit(); return null; }
@@ -102,12 +106,17 @@
     }
   }
 
-  // Debounce save → upload bursts (e.g. multiple state changes during a duel).
+  // Debounce save → upload bursts. 600ms is short enough that quick navigations
+  // usually flush before the next page tries to syncDown.
   let upTimer = null;
   function debouncedSyncUp() {
     if (upTimer) clearTimeout(upTimer);
-    upTimer = setTimeout(() => { upTimer = null; syncUp(); }, 1500);
+    upTimer = setTimeout(() => { upTimer = null; syncUp(); }, 600);
   }
+  // Best-effort flush on page unload so an in-flight change isn't lost.
+  window.addEventListener('beforeunload', () => {
+    if (upTimer) { clearTimeout(upTimer); upTimer = null; syncUp(); }
+  });
 
   window.dtAuth = {
     configured, client,
@@ -135,7 +144,7 @@
     async signOut() {
       if (!client) return;
       await client.auth.signOut();
-      lastSyncedUserId = null;
+      setLastSyncedUserId(null);
       await refresh();
     },
     onChange(fn) { listeners.add(fn); fn(cachedUser); return () => listeners.delete(fn); },
@@ -144,14 +153,18 @@
     syncUp, syncDown, debouncedSyncUp,
   };
 
-  // Auto-sync on auth state changes.
+  // Auto-sync on auth state changes. syncDown only runs ONCE per user-browser
+  // pair; subsequent page loads trust the local cache (which syncUp keeps fresh).
   async function maybeSync() {
     await refresh();
-    if (cachedUser && cachedUser.id !== lastSyncedUserId) {
-      lastSyncedUserId = cachedUser.id;
-      await syncDown();
+    if (cachedUser) {
+      if (getLastSyncedUserId() !== cachedUser.id) {
+        setLastSyncedUserId(cachedUser.id);
+        await syncDown();
+      }
+    } else {
+      setLastSyncedUserId(null);
     }
-    if (!cachedUser) lastSyncedUserId = null;
   }
   if (client) {
     client.auth.onAuthStateChange(maybeSync);

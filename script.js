@@ -96,15 +96,33 @@ function flash(msg) {
   flash._t = setTimeout(() => { bar.style.transition = 'opacity .4s'; bar.style.opacity = '0'; }, 1800);
 }
 
-/* ---- Mock online players ---- */
-const ONLINE_PLAYERS = [
-  { name: 'beanboy42', rank: 'Cadet',     deck: 'Animal',      status: 'idle',    cards: 14 },
-  { name: 'orbitmom',  rank: 'Captain',   deck: 'Jawbreakers', status: 'trading', cards: 38 },
-  { name: 'gunkfan',   rank: 'Rookie',    deck: 'Eds',         status: 'dueling', cards: 9  },
-  { name: 'velmaaa',   rank: 'Pilot',     deck: 'Yogi',        status: 'idle',    cards: 22 },
-  { name: 'd_toon_99', rank: 'Commander', deck: 'Mixed',       status: 'idle',    cards: 51 },
-  { name: 'trashpanda',rank: 'Cadet',     deck: 'Animal',      status: 'trading', cards: 17 },
-];
+/* ---- Real Orbiters from Supabase ----
+   Lobby pages query the profiles table; if no other users are signed up, the
+   lobby is empty and we offer Practice vs AI as a fallback. */
+function rankFromCoins(cents) {
+  if (cents > 50000) return 'Commander';
+  if (cents > 20000) return 'Captain';
+  if (cents > 8000)  return 'Pilot';
+  if (cents > 2000)  return 'Cadet';
+  return 'Rookie';
+}
+async function fetchOnlineUsers() {
+  if (!window.dtAuth || !window.dtAuth.client) return [];
+  try {
+    const me = window.dtAuth.getUser();
+    let q = window.dtAuth.client.from('profiles').select('id, username, coins_cents').limit(20);
+    if (me) q = q.neq('id', me.id);
+    const { data, error } = await q;
+    if (error) { console.warn('fetchOnlineUsers:', error.message); return []; }
+    return (data || []).map(p => ({
+      name: p.username || 'orbiter',
+      rank: rankFromCoins(p.coins_cents || 0),
+      deck: '—',
+      cards: '—',
+      status: 'online',
+    }));
+  } catch (e) { console.warn(e); return []; }
+}
 
 /* ---- Card pack store (get-cards.html) ----
    Pack definitions live in cards.js (window.PACK_DEFS); blurbs are layered on top here. */
@@ -173,14 +191,20 @@ function renderPullResult(pack, pulled) {
 }
 
 /* ---- Trade page ---- */
-function initTrade() {
+async function initTrade() {
   const tbody = document.getElementById('onlinePlayers');
-  ONLINE_PLAYERS.forEach(p => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${p.name}</td><td>${p.status}</td><td>${p.cards}</td>` +
-                   `<td><button class="trade" data-name="${p.name}">TRADE</button></td>`;
-    tbody.appendChild(tr);
-  });
+  const users = await fetchOnlineUsers();
+  if (!users.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--text-muted);">' +
+      'No other Orbiters online yet. Trading needs another signed-up user.</td></tr>';
+  } else {
+    users.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${p.name}</td><td>${p.status}</td><td>${p.cards}</td>` +
+                     `<td><button class="trade" data-name="${p.name}">TRADE</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
 
   const yourInv = document.getElementById('yourInventory');
   const theirInv = document.getElementById('theirInventory');
@@ -444,6 +468,108 @@ function powerWithGoal(card, goalColor) {
   return colorOf(card) === goalColor ? Math.round(base * 1.5) : base;
 }
 
+/* ---- Ability table — gives every Rare/Epic/Legendary a trigger so deck
+   ordering and timing actually matter. Commons stay simple. ---- */
+const COMBAT_ABILITIES = {
+  // Commons (light)
+  'sock-sloth':         { name: 'Last Stand',    type: 'lastStand',   value: 2  },
+  'toasty':             { name: 'First Strike',  type: 'firstStrike', value: 2  },
+  // Rares
+  'fry-fryer':          { name: 'First Strike',  type: 'firstStrike', value: 3  },
+  'bandage-beetle':     { name: 'Mass Heal',     type: 'massBoost',   value: 1  },
+  'trash-turtle':       { name: 'Last Stand',    type: 'lastStand',   value: 5  },
+  'static-sprite':      { name: 'Chain Spark',   type: 'colorChain',  value: 3  },
+  'matchstick-kid':     { name: 'Drain',         type: 'drain',       value: 2  },
+  'soda-surfer':        { name: 'Chain Surf',    type: 'colorChain',  value: 3  },
+  'fork-knight':        { name: 'Last Stand',    type: 'lastStand',   value: 3  },
+  'bubble-imp':         { name: 'Drain',         type: 'drain',       value: 2  },
+  // Epics
+  'grill-sergeant':     { name: 'First Strike+', type: 'firstStrike', value: 5  },
+  'silk-sniper':        { name: 'Snipe',         type: 'drain',       value: 4  },
+  'scrap-titan':        { name: 'Last Stand+',   type: 'lastStand',   value: 8  },
+  'thunder-pup':        { name: 'Chain Bolt',    type: 'colorChain',  value: 4  },
+  'nurse-noodle':       { name: 'Mass Boost',    type: 'massBoost',   value: 2  },
+  'magnetron':          { name: 'Pull',          type: 'drain',       value: 3  },
+  'venom-vixen':        { name: 'Toxin',         type: 'drain',       value: 4  },
+  'time-tortoise':      { name: 'Time Surge',    type: 'powerSurge',  value: 5  },
+  // Legendaries
+  'king-crumbs':        { name: 'Royal Boost',   type: 'massBoost',   value: 3  },
+  'inferno-dragonette': { name: 'Power Surge',   type: 'powerSurge',  value: 8  },
+  'hive-queen':         { name: 'Swarm Boost',   type: 'massBoost',   value: 2  },
+  'chrono-cat':         { name: 'Echo',          type: 'echo',        value: 0  },
+  'colossus-plug':      { name: 'Last Stand++',  type: 'lastStand',   value: 12 },
+  'void-balloon':       { name: 'Mega Drain',    type: 'drain',       value: 8  },
+  'mecha-chef-supreme': { name: 'Wild',          type: 'wild',        value: 0  },
+  'the-janitor':        { name: 'Sweep',         type: 'wild',        value: 0  },
+};
+function abilityOf(card) { return card && COMBAT_ABILITIES[card.id]; }
+function abilityLabel(card) {
+  const ab = abilityOf(card);
+  return ab ? `${ab.name}${ab.value ? ' +' + ab.value : ''}` : '';
+}
+
+/* Compute one side's effective total given the opponent's field and goal color. */
+function combatTally(side, otherSide, goal) {
+  let total = 0;
+  // Per-card power with on-self ability bonuses + mass-boost from teammates.
+  side.forEach((card, i) => {
+    let pwr = powerOf(card);
+    const ab = abilityOf(card);
+    // Wild overrides color match.
+    let isMatch = colorOf(card) === goal;
+    if (ab && ab.type === 'wild') isMatch = true;
+    if (isMatch) pwr = Math.round(pwr * 1.5);
+
+    if (ab) {
+      if (ab.type === 'firstStrike' && i === 0)  pwr += ab.value;
+      if (ab.type === 'lastStand'   && i === 10) pwr += ab.value;
+      if (ab.type === 'colorChain'  && i > 0 && colorOf(side[i-1]) === colorOf(card)) pwr += ab.value;
+      if (ab.type === 'powerSurge'  && i >= 8)   pwr += ab.value;
+      if (ab.type === 'echo' && otherSide.length) {
+        const last = otherSide[otherSide.length - 1];
+        pwr = powerOf(last);
+        const lastMatch = colorOf(last) === (otherSide === side ? goal : null);
+        // Echo doesn't apply our color bonus.
+      }
+    }
+    // Mass boost from teammates (each massBoost card adds value to every OTHER ally).
+    side.forEach((other, j) => {
+      if (i === j) return;
+      const oa = abilityOf(other);
+      if (oa && oa.type === 'massBoost') pwr += oa.value;
+    });
+    total += pwr;
+  });
+  // Drains from opponent reduce our total.
+  otherSide.forEach(c => {
+    const ab = abilityOf(c);
+    if (ab && ab.type === 'drain') total -= ab.value;
+  });
+  return Math.max(0, total);
+}
+
+/* Per-card displayed power (what shows in the chip). Excludes drain. */
+function combatCardPower(card, idx, side, otherSide, goal) {
+  let pwr = powerOf(card);
+  const ab = abilityOf(card);
+  let isMatch = colorOf(card) === goal;
+  if (ab && ab.type === 'wild') isMatch = true;
+  if (isMatch) pwr = Math.round(pwr * 1.5);
+  if (ab) {
+    if (ab.type === 'firstStrike' && idx === 0)  pwr += ab.value;
+    if (ab.type === 'lastStand'   && idx === 10) pwr += ab.value;
+    if (ab.type === 'colorChain'  && idx > 0 && colorOf(side[idx-1]) === colorOf(card)) pwr += ab.value;
+    if (ab.type === 'powerSurge'  && idx >= 8)   pwr += ab.value;
+    if (ab.type === 'echo' && otherSide.length) pwr = powerOf(otherSide[otherSide.length - 1]);
+  }
+  side.forEach((other, j) => {
+    if (idx === j) return;
+    const oa = abilityOf(other);
+    if (oa && oa.type === 'massBoost') pwr += oa.value;
+  });
+  return Math.max(0, pwr);
+}
+
 function buildDeckFromInventory() {
   const inv = (window.__dt.load().inventory || []).filter(id => window.CARD_BY_ID[id]);
   const deck = [];
@@ -638,15 +764,26 @@ function startCartoonCombat(opponent) {
   repaint();
 }
 
-function initDuel() {
+async function initDuel() {
   const tbody = document.getElementById('duelLobby');
   if (!tbody) return;
-  ONLINE_PLAYERS.forEach(p => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + p.name + '</td><td>' + p.rank + '</td><td>' + p.deck + '</td>' +
-                   '<td><button class="play" data-name="' + p.name + '" data-rank="' + p.rank + '">DUEL</button></td>';
-    tbody.appendChild(tr);
-  });
+  // Always offer practice vs AI at the top so users can duel even when alone.
+  tbody.innerHTML =
+    '<tr><td><b>AI BOT</b></td><td>Cadet</td><td>Practice</td>' +
+    '<td><button class="play" data-name="AI Bot" data-rank="Cadet">DUEL</button></td></tr>';
+  const users = await fetchOnlineUsers();
+  if (!users.length) {
+    tbody.insertAdjacentHTML('beforeend',
+      '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--text-muted);">' +
+      'No other Orbiters online yet. Practice vs AI above, or invite friends to sign up.</td></tr>');
+  } else {
+    users.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + p.name + '</td><td>' + p.rank + '</td><td>' + p.deck + '</td>' +
+                     '<td><button class="play" data-name="' + p.name + '" data-rank="' + p.rank + '">DUEL</button></td>';
+      tbody.appendChild(tr);
+    });
+  }
   tbody.addEventListener('click', e => {
     const btn = e.target.closest('button.play');
     if (!btn) return;
@@ -666,9 +803,15 @@ function initDuel() {
 function initDuelArena() {
   const params = new URLSearchParams(location.search);
   const opponent = {
-    name: params.get('vs')   || 'beanboy42',
+    name: params.get('vs')   || 'AI Bot',
     rank: params.get('rank') || 'Cadet',
   };
+  // Set your name in the arena header from auth (or "GUEST").
+  const youNameEl = document.getElementById('daYouName');
+  if (youNameEl) {
+    const u = window.dtAuth && window.dtAuth.getUser && window.dtAuth.getUser();
+    youNameEl.textContent = u ? (u.user_metadata?.username || u.email.split('@')[0]) : 'GUEST';
+  }
   document.getElementById('daOppName').textContent     = opponent.name;
   document.getElementById('daThemLabel').textContent   = opponent.name.toUpperCase();
   document.getElementById('daResultThemLabel').textContent = opponent.name.toUpperCase();
@@ -721,23 +864,40 @@ function initDuelArena() {
     document.getElementById('daTurnInfo').textContent = 'Your move — click a card to play it';
   }
 
-  function makeCard(c, goal, withStats) {
+  function makeCard(c, goal, withStats, side, otherSide, idx) {
     const t = window.buildCardToon(c, { size: withStats ? 92 : 78, showStats: withStats });
-    if (colorOf(c) === goal) t.classList.add('da-match');
+    const ab = abilityOf(c);
+    const wild = ab && ab.type === 'wild';
+    if (colorOf(c) === goal || wild) t.classList.add('da-match');
     const pwr = document.createElement('div');
     pwr.className = 'da-power';
-    if (colorOf(c) === goal) pwr.classList.add('bonus');
-    pwr.textContent = powerWithGoal(c, goal);
+    if (colorOf(c) === goal || wild) pwr.classList.add('bonus');
+    // For hand cards, side+idx aren't known — fall back to base+goal preview.
+    if (side && typeof idx === 'number') {
+      pwr.textContent = combatCardPower(c, idx, side, otherSide, goal);
+    } else {
+      pwr.textContent = powerWithGoal(c, goal);
+    }
     t.appendChild(pwr);
+    if (ab) {
+      const lbl = document.createElement('div');
+      lbl.className = 'da-ability';
+      lbl.textContent = ab.name + (ab.value ? ' +' + ab.value : '');
+      t.appendChild(lbl);
+    }
     return t;
   }
 
-  function tally(field, goal) { return field.reduce((s, c) => s + powerWithGoal(c, goal), 0); }
+  function tally(field, otherField, goal) { return combatTally(field, otherField, goal); }
 
   function bumpPower(elId, value) {
     const el = document.getElementById(elId);
     el.textContent = value;
     el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  }
+  function refreshTallies() {
+    bumpPower('daYouPower',  combatTally(yourField, aiField, yourGoal));
+    bumpPower('daThemPower', combatTally(aiField, yourField, aiGoal));
   }
 
   function playYourCard(idx) {
@@ -751,14 +911,14 @@ function initDuelArena() {
     if (yourDraw.length) yourHand.push(yourDraw.shift());
     rerenderHand();
 
-    // Animate played card into the field.
-    const fieldEl = document.getElementById('daYouField');
-    const t = makeCard(card, yourGoal, false);
-    t.classList.add('da-fly-in-bottom');
-    fieldEl.appendChild(t);
-    bumpPower('daYouPower', tally(yourField, yourGoal));
+    // Re-render your field so abilities (mass boost, color chain, etc.) stay accurate.
+    rerenderField('daYouField', yourField, aiField, yourGoal, true);
+    refreshTallies();
+    const ab = abilityOf(card);
+    const abText = ab ? ' [' + ab.name + (ab.value ? ' +' + ab.value : '') + ']' : '';
+    const power  = combatCardPower(card, yourField.length - 1, yourField, aiField, yourGoal);
     document.getElementById('daTurnInfo').textContent =
-      'You played ' + card.name + ' (' + powerWithGoal(card, yourGoal) + ')';
+      'You played ' + card.name + ' (' + power + ')' + abText;
 
     setTimeout(playAI, 900);
   }
@@ -784,13 +944,13 @@ function initDuelArena() {
     aiField.push(card);
     if (aiDraw.length) aiHand.push(aiDraw.shift());
 
-    const fieldEl = document.getElementById('daThemField');
-    const t = makeCard(card, aiGoal, false);
-    t.classList.add('da-fly-in-top');
-    fieldEl.appendChild(t);
-    bumpPower('daThemPower', tally(aiField, aiGoal));
+    rerenderField('daThemField', aiField, yourField, aiGoal, false);
+    refreshTallies();
+    const ab = abilityOf(card);
+    const abText = ab ? ' [' + ab.name + (ab.value ? ' +' + ab.value : '') + ']' : '';
+    const power  = combatCardPower(card, aiField.length - 1, aiField, yourField, aiGoal);
     document.getElementById('daTurnInfo').textContent =
-      opponent.name + ' played ' + card.name + ' (' + powerWithGoal(card, aiGoal) + ')';
+      opponent.name + ' played ' + card.name + ' (' + power + ')' + abText;
 
     setTimeout(() => {
       yourTurn = true; locked = false;
@@ -803,9 +963,21 @@ function initDuelArena() {
     return false;
   }
 
+  function rerenderField(hostId, side, otherSide, goal, animateLast) {
+    const host = document.getElementById(hostId);
+    host.innerHTML = '';
+    side.forEach((c, i) => {
+      const t = makeCard(c, goal, false, side, otherSide, i);
+      if (animateLast && i === side.length - 1) {
+        t.classList.add(hostId === 'daThemField' ? 'da-fly-in-top' : 'da-fly-in-bottom');
+      }
+      host.appendChild(t);
+    });
+  }
+
   function endDuel() {
-    const youTotal  = tally(yourField, yourGoal);
-    const themTotal = tally(aiField,   aiGoal);
+    const youTotal  = combatTally(yourField, aiField, yourGoal);
+    const themTotal = combatTally(aiField, yourField, aiGoal);
     const win  = youTotal > themTotal;
     const draw = youTotal === themTotal;
 
