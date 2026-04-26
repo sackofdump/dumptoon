@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1280" />
+<title>Dumptoon — All Trading Cards on the Market</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .market-controls {
+    background: var(--panel-light); border: 6px solid var(--bg-mid);
+    padding: 12px 16px; display: flex; gap: 8px; flex-wrap: wrap;
+    align-items: center; margin-bottom: 14px;
+  }
+  .market-controls button, .market-controls select {
+    background: var(--bg-mid); color: #cfe2e8; border: none;
+    font-family: 'Oswald', sans-serif; letter-spacing: 1px;
+    padding: 8px 14px; cursor: pointer; font-size: 13px;
+  }
+  .market-controls button.active { background: var(--green); color: #fff; }
+  .market-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+  }
+  .market-card {
+    background: var(--panel-light); border: 6px solid var(--bg-mid);
+    padding: 12px; display: flex; flex-direction: column; align-items: center;
+  }
+  .market-card .toon { width: 130px; height: 130px; margin-bottom: 8px; }
+  .market-card h4 {
+    margin: 0; font-family: 'Oswald', sans-serif; letter-spacing: 1px;
+    color: var(--text-dark); text-align: center;
+  }
+  .market-card .role {
+    font-size: 11px; color: var(--text-muted); letter-spacing: 1px; margin: 2px 0 6px;
+  }
+  .market-card .desc {
+    font-size: 12px; color: var(--text-dark); text-align: center; line-height: 1.4;
+    min-height: 48px;
+  }
+  .market-card .price {
+    margin-top: 8px; font-family: 'Oswald', sans-serif; letter-spacing: 1px;
+    color: var(--green); font-weight: 700;
+  }
+  .rarity-pill {
+    display: inline-block; padding: 2px 8px; font-size: 10px;
+    font-family: 'Oswald', sans-serif; letter-spacing: 2px; border-radius: 2px;
+    margin-bottom: 4px;
+  }
+  .rarity-pill.common    { background: #6cb148; color: #fff; }
+  .rarity-pill.rare      { background: #2f7fc4; color: #fff; }
+  .rarity-pill.epic      { background: #6a1880; color: #fff; }
+  .rarity-pill.legendary { background: #b56a10; color: #fff; }
+</style>
+</head>
+<body>
+<div class="top-ad">AD &middot; 728 &times; 90</div>
+
+<div class="page">
+  <div class="dt-header">
+    <div class="dt-logo"><span class="small">DUMPTOON</span><span class="big">DT</span><span class="tag">NETWORK</span></div>
+    <nav class="dt-nav">
+      <button class="nav-btn red">GAMES</button>
+      <button class="nav-btn blue">TV SHOWS</button>
+      <button class="nav-btn green">TRADING CARDS</button>
+      <button class="nav-btn orange">SHOP</button>
+    </nav>
+    <div class="dt-search">
+      <div class="dt-search-row"><label>SEARCH:</label><input type="text" id="marketSearch" /><button class="go-btn">GO</button></div>
+    </div>
+  </div>
+
+  <div class="orbit-bar">
+    <div class="brand"><span class="o-icon"></span><em>ORBIT&reg;</em> CARD MARKET</div>
+    <div class="signed-in"><span>SIGNED IN AS</span><span class="pill" id="userPill">guest &middot; <span id="userCoins">$5.00</span></span><button class="logout">LOGIN</button></div>
+  </div>
+
+  <div class="main-grid">
+    <aside class="sidebar">
+      <a class="side-tab" href="get-cards.html">GET CARDS</a>
+      <a class="side-tab" href="play-dtoons.html">PLAY dTOONS</a>
+      <a class="side-tab active" href="cards-market.html">CARD MARKET</a>
+      <a class="side-tab" href="my-orbit.html">MY ORBIT</a>
+      <a class="side-tab" href="visit-dzones.html">VISIT dZONES</a>
+      <a class="side-tab" href="orbit-help.html">ORBIT HELP</a>
+      <a class="side-tab" href="trade.html" style="background:var(--orange);">TRADE</a>
+      <div class="ad-slot">AD</div>
+    </aside>
+
+    <main class="center">
+      <div class="page-title">CARD MARKET &middot; ALL CARDS IN ORBIT</div>
+      <p style="color:#cfe2e8;letter-spacing:1px;margin:0 0 12px;">Every card currently on the dToon market. Filter by rarity or sort by stat.</p>
+
+      <div class="market-controls">
+        <span style="color:var(--text-dark);font-family:Oswald,sans-serif;letter-spacing:2px;font-size:12px;">RARITY:</span>
+        <button data-rar="all"       class="active">ALL</button>
+        <button data-rar="common">COMMON</button>
+        <button data-rar="rare">RARE</button>
+        <button data-rar="epic">EPIC</button>
+        <button data-rar="legendary">LEGENDARY</button>
+        <span style="margin-left:auto;color:var(--text-dark);font-family:Oswald,sans-serif;letter-spacing:2px;font-size:12px;">SORT:</span>
+        <select id="marketSort">
+          <option value="default">RARITY ↓</option>
+          <option value="hp">HP ↓</option>
+          <option value="atk">ATK ↓</option>
+          <option value="spd">SPD ↓</option>
+          <option value="name">NAME ↑</option>
+        </select>
+      </div>
+
+      <div class="market-grid" id="marketGrid"></div>
+    </main>
+
+    <aside class="right-rail">
+      <div class="tip-card">
+        <h4>What is the market?</h4>
+        <p>This is the catalog. To actually buy cards, head to <b>GET CARDS</b> and crack a pack. To swap with another player, hit <b>TRADE</b>.</p>
+      </div>
+      <div class="news-card">
+        <h4>Pack drops</h4>
+        <p>New pack designs roll in regularly. Holos rotate weekly.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<footer>DUMPTOON DT NETWORK &middot; CARD MARKET</footer>
+<script src="cards.js"></script>
+<script src="card-art.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="config.local.js" onerror="console.info('No config.local.js — using committed defaults')"></script>
+<script src="supabase-client.js"></script>
+<script src="script.js"></script>
+<script>initMarket();</script>
+</body>
+</html>

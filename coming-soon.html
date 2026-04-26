@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1280" />
+<title>Dumptoon — TV Shows · Coming Soon</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .soon-card {
+    max-width: 700px; margin: 40px auto;
+    background: var(--panel-light); border: 8px solid var(--bg-mid);
+    padding: 40px; text-align: center;
+  }
+  .soon-card h1 {
+    font-family: 'Oswald', sans-serif; letter-spacing: 4px;
+    color: var(--red); font-size: 56px; margin: 0 0 8px;
+  }
+  .soon-card .sub { font-family: 'Oswald', sans-serif; letter-spacing: 3px; color: var(--text-dark); }
+  .soon-card .blurb { color: var(--text-muted); margin: 18px 0 24px; line-height: 1.6; }
+  .tv-static {
+    width: 360px; height: 240px; margin: 18px auto;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,.08) 0 2px, transparent 2px 4px),
+      linear-gradient(135deg, #2c6175, #15485a);
+    border: 6px solid var(--bg-mid);
+    animation: tv-flicker 0.18s steps(2) infinite;
+    position: relative;
+  }
+  .tv-static::after {
+    content: 'NO SIGNAL'; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #cfe2e8; font-family: 'Oswald', sans-serif; letter-spacing: 4px; font-size: 22px;
+    text-shadow: 0 0 6px #000;
+  }
+  @keyframes tv-flicker {
+    0%   { filter: brightness(1)    contrast(1); }
+    50%  { filter: brightness(1.15) contrast(1.2) hue-rotate(8deg); }
+    100% { filter: brightness(.95)  contrast(1);  }
+  }
+</style>
+</head>
+<body>
+<div class="top-ad">AD &middot; 728 &times; 90</div>
+
+<div class="page">
+  <div class="dt-header">
+    <div class="dt-logo"><span class="small">DUMPTOON</span><span class="big">DT</span><span class="tag">NETWORK</span></div>
+    <nav class="dt-nav">
+      <button class="nav-btn red">GAMES</button>
+      <button class="nav-btn blue">TV SHOWS</button>
+      <button class="nav-btn green">TRADING CARDS</button>
+      <button class="nav-btn orange">SHOP</button>
+    </nav>
+  </div>
+
+  <div class="soon-card">
+    <div class="sub">DT NETWORK &middot; TV SHOWS</div>
+    <h1>COMING SOON</h1>
+    <div class="tv-static"></div>
+    <p class="blurb">
+      The DT lineup is still in production. We're stitching the schedule together
+      and re-running the pilots. In the meantime, hit the trading cards or
+      the dZones to fill the time.
+    </p>
+    <a href="index.html"><button class="see-more">BACK TO HOMEPAGE</button></a>
+  </div>
+</div>
+
+<footer>DUMPTOON DT NETWORK &middot; TV SHOWS PAGE &middot; COMING SOON</footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="config.local.js" onerror="console.info('No config.local.js — using committed defaults')"></script>
+<script src="supabase-client.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

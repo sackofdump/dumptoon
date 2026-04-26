@@ -133,7 +133,7 @@ function initStore() {
     s.inventory = (s.inventory || []).concat(pulled.map(c => c.id));
     window.__dt.save(s);
     window.__dt.paintWallet();
-    renderPullResult(pack, pulled);
+    animatePackOpen(pack, pulled, () => renderPullResult(pack, pulled));
   });
 }
 
@@ -356,6 +356,119 @@ function initZones() {
     });
   });
 }
+
+/* ---- Animated pack open ---- */
+function animatePackOpen(pack, pulled, onDone) {
+  const modal = document.createElement('div');
+  modal.className = 'pack-open-modal';
+  modal.innerHTML = `
+    <div class="pack-open-stage">
+      <div class="pack-open-burst"></div>
+      <div class="pack-open-pack pack-art-${pack.art}">
+        <div class="pack-half top"></div>
+        <div class="pack-half bottom"></div>
+      </div>
+      <div class="pack-open-cards"></div>
+      <button class="pack-open-done">ADD TO INVENTORY</button>
+    </div>`;
+  document.body.appendChild(modal);
+  const packEl   = modal.querySelector('.pack-open-pack');
+  const burstEl  = modal.querySelector('.pack-open-burst');
+  const cardsEl  = modal.querySelector('.pack-open-cards');
+  const doneBtn  = modal.querySelector('.pack-open-done');
+  doneBtn.style.display = 'none';
+
+  // Sequence: 0.0s pack flies in → 0.8s shake → 1.6s burst+rip → 2.2s reveal cards
+  setTimeout(() => packEl.classList.add('shake'), 800);
+  setTimeout(() => {
+    burstEl.classList.add('flash');
+    packEl.querySelector('.top').classList.add('rip');
+    packEl.querySelector('.bottom').classList.add('rip');
+    packEl.classList.add('opening');
+  }, 1600);
+  setTimeout(() => {
+    pulled.forEach((card, i) => setTimeout(() => {
+      const el = window.buildCardToon(card, { size: 110, showStats: true });
+      el.classList.add('reveal');
+      // Sub-burst tinted by rarity
+      const sub = document.createElement('div');
+      sub.className = 'card-sub-burst rarity-' + card.rarity;
+      el.appendChild(sub);
+      cardsEl.appendChild(el);
+    }, i * 280));
+  }, 2200);
+  setTimeout(() => { doneBtn.style.display = 'block'; }, 2200 + pulled.length * 280 + 400);
+
+  function close() { modal.remove(); if (onDone) onDone(); }
+  doneBtn.addEventListener('click', close);
+  modal.addEventListener('click', e => { if (e.target === modal) close(); });
+}
+
+/* ---- Card market (cards-market.html) ---- */
+function initMarket() {
+  const grid = document.getElementById('marketGrid');
+  if (!grid) return;
+  let activeRarity = 'all';
+  let activeSort = 'default';
+  const rarityOrder = { common: 0, rare: 1, epic: 2, legendary: 3 };
+  const rarityPrice = { common: 50, rare: 200, epic: 600, legendary: 1500 };
+
+  function paint() {
+    const search = (document.getElementById('marketSearch').value || '').toLowerCase().trim();
+    let cards = window.CARDS.slice();
+    if (activeRarity !== 'all') cards = cards.filter(c => c.rarity === activeRarity);
+    if (search) cards = cards.filter(c => c.name.toLowerCase().includes(search) || c.ability.toLowerCase().includes(search));
+    cards.sort((a, b) => {
+      switch (activeSort) {
+        case 'hp':   return b.hp - a.hp;
+        case 'atk':  return b.atk - a.atk;
+        case 'spd':  return b.spd - a.spd;
+        case 'name': return a.name.localeCompare(b.name);
+        default:     return rarityOrder[a.rarity] - rarityOrder[b.rarity] || a.name.localeCompare(b.name);
+      }
+    });
+    grid.innerHTML = '';
+    cards.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'market-card';
+      card.innerHTML = `
+        <span class="rarity-pill ${c.rarity}">${c.rarity.toUpperCase()}</span>
+        <div class="toon-mount"></div>
+        <h4>${c.name}</h4>
+        <div class="role">${c.role} &middot; HP ${c.hp} · ATK ${c.atk} · SPD ${c.spd}</div>
+        <div class="desc">${c.ability}: ${c.desc}</div>
+        <div class="price">$${(rarityPrice[c.rarity]/100).toFixed(2)}</div>`;
+      card.querySelector('.toon-mount').replaceWith(window.buildCardToon(c));
+      grid.appendChild(card);
+    });
+  }
+
+  document.querySelectorAll('.market-controls button[data-rar]').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.market-controls button[data-rar]').forEach(x => x.classList.toggle('active', x === b));
+      activeRarity = b.dataset.rar;
+      paint();
+    });
+  });
+  document.getElementById('marketSort').addEventListener('change', e => { activeSort = e.target.value; paint(); });
+  document.getElementById('marketSearch').addEventListener('input', paint);
+  paint();
+}
+
+/* ---- Global nav button routing ---- */
+document.addEventListener('DOMContentLoaded', () => {
+  const map = {
+    'red':    'visit-dzones.html',
+    'blue':   'coming-soon.html',
+    'green':  'cards-market.html',
+    'orange': 'get-cards.html',
+  };
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    Object.entries(map).forEach(([cls, href]) => {
+      if (b.classList.contains(cls)) b.addEventListener('click', () => window.location.href = href);
+    });
+  });
+});
 
 /* ---- Help / contact ---- */
 function initHelp() {
