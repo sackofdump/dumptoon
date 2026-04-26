@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dumptoon — Duel Arena</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body class="duel-arena-body">
+
+<div class="duel-arena">
+  <!-- Backdrop / sky -->
+  <div class="da-backdrop"></div>
+  <div class="da-spotlights"></div>
+
+  <header class="da-header">
+    <button class="da-back" onclick="location.href='play-dtoons.html'">&laquo; LOBBY</button>
+    <div class="da-versus">
+      <div class="da-name you">alice</div>
+      <div class="da-vs">VS</div>
+      <div class="da-name them" id="daOppName">—</div>
+    </div>
+    <button class="da-forfeit" id="daForfeit">FORFEIT</button>
+  </header>
+
+  <!-- Goal banners -->
+  <div class="da-goals">
+    <div class="da-goal-block you">
+      <div class="da-goal-label">YOUR GOAL</div>
+      <div class="da-goal-pip" id="daYourGoalPip"></div>
+      <div class="da-goal-name" id="daYourGoalName">—</div>
+      <div class="da-goal-set">set by <b id="daYourGoalCard">—</b></div>
+    </div>
+    <div class="da-goal-block them">
+      <div class="da-goal-label" id="daThemGoalLabel">OPPONENT GOAL</div>
+      <div class="da-goal-pip" id="daThemGoalPip"></div>
+      <div class="da-goal-name" id="daThemGoalName">—</div>
+      <div class="da-goal-set">set by <b id="daThemGoalCard">—</b></div>
+    </div>
+  </div>
+
+  <!-- Tally bar -->
+  <div class="da-tally">
+    <div class="da-side-tally you">YOU<br/><span id="daYouPower">0</span></div>
+    <div class="da-turn" id="daTurnInfo">Get ready…</div>
+    <div class="da-side-tally them"><span id="daThemLabel">OPPONENT</span><br/><span id="daThemPower">0</span></div>
+  </div>
+
+  <!-- Opponent field (top) -->
+  <div class="da-field them" id="daThemField"></div>
+
+  <!-- Mid divider -->
+  <div class="da-mid-line"></div>
+
+  <!-- Your field -->
+  <div class="da-field you" id="daYouField"></div>
+
+  <!-- Your hand -->
+  <div class="da-hand-label">YOUR HAND</div>
+  <div class="da-hand" id="daYouHand"></div>
+</div>
+
+<!-- Intro overlay -->
+<div class="da-intro" id="daIntro">
+  <div class="da-intro-text" id="daIntroText">READY?</div>
+</div>
+
+<!-- Result overlay -->
+<div class="da-result" id="daResult" style="display:none;">
+  <div class="da-result-card">
+    <h1 class="da-result-title" id="daResultTitle">—</h1>
+    <div class="da-result-final">
+      <div>YOU: <b id="daResultYou">0</b></div>
+      <span style="margin:0 14px;">vs</span>
+      <div><span id="daResultThemLabel">OPPONENT</span>: <b id="daResultThem">0</b></div>
+    </div>
+    <div class="da-result-msg" id="daResultMsg"></div>
+    <div class="da-result-actions">
+      <button onclick="location.href='play-dtoons.html'">REMATCH</button>
+      <button onclick="location.href='index.html'">HOME</button>
+    </div>
+  </div>
+</div>
+
+<script src="cards.js"></script>
+<script src="card-art.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="config.local.js" onerror="console.info('No config.local.js')"></script>
+<script src="supabase-client.js"></script>
+<script src="script.js"></script>
+<script>initDuelArena();</script>
+</body>
+</html>

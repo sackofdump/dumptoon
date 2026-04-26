@@ -414,11 +414,228 @@ function initPoll() {
 }
 
 /* ====================================================================
-   DUEL — pick 3 cards, fight an AI deck, win coins + bonus card on streaks.
-   Reuses window.runBattle() from the simulator.
+   CARTOON COMBAT — 12-card deck, color-goal duel system inspired by the
+   Cartoon Orbit "C4" game from 2002. Players alternate playing cards
+   from a 5-card hand; bottom of deck sets the GOAL COLOR which gives
+   matching cards a power bonus. Highest total power wins.
    ==================================================================== */
-function pickAIDeck() {
-  return window.CARDS.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+const COMBAT_COLORS = {
+  red:    { hex: '#d6322f', name: 'RED' },
+  yellow: { hex: '#f5b827', name: 'YELLOW' },
+  green:  { hex: '#6cb148', name: 'GREEN' },
+  cyan:   { hex: '#4ea6cc', name: 'CYAN' },
+  blue:   { hex: '#2f7fc4', name: 'BLUE' },
+  purple: { hex: '#8a4abe', name: 'PURPLE' },
+};
+function colorOf(card) {
+  const h = ((card && card.hue) != null) ? card.hue : 200;
+  if (h < 30 || h >= 330) return 'red';
+  if (h < 90)  return 'yellow';
+  if (h < 150) return 'green';
+  if (h < 210) return 'cyan';
+  if (h < 270) return 'blue';
+  return 'purple';
+}
+function powerOf(card) {
+  return (card.hp || 0) + (card.atk || 0) * 2 + (card.spd || 0);
+}
+function powerWithGoal(card, goalColor) {
+  const base = powerOf(card);
+  return colorOf(card) === goalColor ? Math.round(base * 1.5) : base;
+}
+
+function buildDeckFromInventory() {
+  const inv = (window.__dt.load().inventory || []).filter(id => window.CARD_BY_ID[id]);
+  const deck = [];
+  // Use what we have, then loop through to fill to 12.
+  const pool = inv.length ? inv : window.CARDS_BY_RARITY.common.map(c => c.id);
+  while (deck.length < 12) {
+    deck.push(pool[Math.floor(Math.random() * pool.length)]);
+  }
+  return deck.sort(() => Math.random() - 0.5).map(id => window.CARD_BY_ID[id]);
+}
+function buildAIDeck(opponentRank) {
+  // AI deck quality scales loosely with opponent rank.
+  const tiers = ['common','common','rare','epic','legendary'];
+  const weights = (opponentRank === 'Commander') ? [10,30,30,20,10]
+               : (opponentRank === 'Captain')    ? [20,40,25,12,3]
+               : (opponentRank === 'Pilot')      ? [30,40,22,7,1]
+               : [50,35,12,3,0]; // Cadet / Rookie
+  const deck = [];
+  while (deck.length < 12) {
+    let r = Math.random() * 100, t = 0;
+    for (let i = 0; i < tiers.length; i++) { t += weights[i]; if (r <= t) { const pool = window.CARDS_BY_RARITY[tiers[i]]; deck.push(pool[Math.floor(Math.random() * pool.length)]); break; } }
+  }
+  return deck;
+}
+
+function startCartoonCombat(opponent) {
+  const yourDeck = buildDeckFromInventory();
+  const aiDeck   = buildAIDeck(opponent.rank);
+  // Bottom card = goal card.
+  const yourGoalCard = yourDeck[yourDeck.length - 1];
+  const aiGoalCard   = aiDeck[aiDeck.length - 1];
+  const yourGoal = colorOf(yourGoalCard);
+  const aiGoal   = colorOf(aiGoalCard);
+  const yourPlay = yourDeck.slice(0, 11); // top 11 are playable, last is goal
+  const aiPlay   = aiDeck.slice(0, 11);
+  const HAND_SIZE = 5;
+  const yourHand = yourPlay.slice(0, HAND_SIZE);
+  const yourDraw = yourPlay.slice(HAND_SIZE);
+  const aiHand   = aiPlay.slice(0, HAND_SIZE);
+  const aiDraw   = aiPlay.slice(HAND_SIZE);
+  const yourField = []; const aiField = [];
+
+  const modal = document.createElement('div');
+  modal.className = 'duel-modal cartoon-combat';
+  modal.innerHTML = `
+    <div class="cc-stage">
+      <div class="cc-header">
+        <div>vs <b>${opponent.name}</b> &middot; ${opponent.rank}</div>
+        <button class="duel-cancel cc-forfeit">FORFEIT</button>
+      </div>
+      <div class="cc-goals">
+        <div class="cc-goal you">
+          <div class="cc-goal-label">YOUR GOAL COLOR</div>
+          <div class="cc-goal-pip" style="background:${COMBAT_COLORS[yourGoal].hex};"></div>
+          <div class="cc-goal-name">${COMBAT_COLORS[yourGoal].name}</div>
+          <div class="cc-goal-set">set by ${yourGoalCard.name}</div>
+        </div>
+        <div class="cc-goal them">
+          <div class="cc-goal-label">${opponent.name.toUpperCase()}'S GOAL</div>
+          <div class="cc-goal-pip" style="background:${COMBAT_COLORS[aiGoal].hex};"></div>
+          <div class="cc-goal-name">${COMBAT_COLORS[aiGoal].name}</div>
+          <div class="cc-goal-set">set by ${aiGoalCard.name}</div>
+        </div>
+      </div>
+      <div class="cc-tally">
+        <div class="cc-side-tally you">YOU: <b id="ccYouPower">0</b></div>
+        <div class="cc-turn-info" id="ccTurnInfo">Click a card from your hand to play it</div>
+        <div class="cc-side-tally them">${opponent.name.toUpperCase()}: <b id="ccThemPower">0</b></div>
+      </div>
+      <div class="cc-fields">
+        <div class="cc-field" id="ccYouField"></div>
+        <div class="cc-field them" id="ccThemField"></div>
+      </div>
+      <div class="cc-hand-label">YOUR HAND (${HAND_SIZE} cards)</div>
+      <div class="cc-hand" id="ccYouHand"></div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  modal.querySelector('.cc-forfeit').addEventListener('click', () => {
+    if (confirm('Forfeit this duel?')) modal.remove();
+  });
+
+  function tally(field, goal) {
+    let total = 0; field.forEach(c => total += powerWithGoal(c, goal));
+    return total;
+  }
+  function repaint() {
+    const youField = document.getElementById('ccYouField');
+    const themField= document.getElementById('ccThemField');
+    youField.innerHTML = ''; themField.innerHTML = '';
+    yourField.forEach(c => youField.appendChild(makeFieldCard(c, yourGoal)));
+    aiField.forEach(c   => themField.appendChild(makeFieldCard(c, aiGoal)));
+    const youHand = document.getElementById('ccYouHand');
+    youHand.innerHTML = '';
+    yourHand.forEach((c, i) => {
+      const t = makeHandCard(c, yourGoal, i);
+      t.addEventListener('click', () => playYourCard(i));
+      youHand.appendChild(t);
+    });
+    document.getElementById('ccYouPower').textContent  = tally(yourField, yourGoal);
+    document.getElementById('ccThemPower').textContent = tally(aiField,   aiGoal);
+  }
+  function makeFieldCard(c, goal) {
+    const t = window.buildCardToon(c, { size: 70 });
+    const match = colorOf(c) === goal;
+    if (match) t.classList.add('cc-match');
+    const p = document.createElement('div');
+    p.className = 'cc-power' + (match ? ' bonus' : '');
+    p.textContent = powerWithGoal(c, goal);
+    t.appendChild(p);
+    return t;
+  }
+  function makeHandCard(c, goal, idx) {
+    const t = window.buildCardToon(c, { size: 80, showStats: true });
+    if (colorOf(c) === goal) t.classList.add('cc-match');
+    t.style.cursor = 'pointer';
+    return t;
+  }
+
+  function playYourCard(idx) {
+    const card = yourHand.splice(idx, 1)[0];
+    if (!card) return;
+    yourField.push(card);
+    if (yourDraw.length) yourHand.push(yourDraw.shift());
+    repaint();
+    setTimeout(playAICard, 700);
+  }
+  function playAICard() {
+    if (!aiHand.length) { checkEnd(); return; }
+    // AI strategy: prefer goal-matching cards (for the bonus), else highest base power.
+    let bestIdx = 0, bestVal = -1;
+    aiHand.forEach((c, i) => {
+      const v = powerWithGoal(c, aiGoal);
+      if (v > bestVal) { bestVal = v; bestIdx = i; }
+    });
+    const card = aiHand.splice(bestIdx, 1)[0];
+    aiField.push(card);
+    if (aiDraw.length) aiHand.push(aiDraw.shift());
+    repaint();
+    document.getElementById('ccTurnInfo').textContent =
+      opponent.name + ' played ' + card.name + ' (' + powerWithGoal(card, aiGoal) + ' power)';
+    checkEnd();
+  }
+  function checkEnd() {
+    if (yourField.length >= 11 && aiField.length >= 11) endDuel();
+  }
+  function endDuel() {
+    const yourTotal = tally(yourField, yourGoal);
+    const aiTotal   = tally(aiField,   aiGoal);
+    const win = yourTotal > aiTotal;
+    const draw = yourTotal === aiTotal;
+
+    const s = window.__dt.load();
+    let bonusMsg = '';
+    if (win) {
+      s.duelsWon = (s.duelsWon || 0) + 1;
+      s.duelStreak = (s.duelStreak || 0) + 1;
+      s.maxStreak = Math.max(s.maxStreak || 0, s.duelStreak);
+      s.coins += 200; // $2.00 prize
+      bonusMsg = '+$2.00';
+      if (s.duelStreak % 5 === 0) {
+        const rarity = ['rare','epic','epic','legendary'][Math.floor(Math.random()*4)];
+        const pool = window.CARDS_BY_RARITY[rarity];
+        const card = pool[Math.floor(Math.random() * pool.length)];
+        s.inventory.push(card.id);
+        bonusMsg += ' + bonus ' + rarity.toUpperCase() + ': ' + card.name;
+      }
+    } else if (!draw) {
+      s.duelsLost = (s.duelsLost || 0) + 1;
+      s.duelStreak = 0;
+    }
+    window.__dt.save(s);
+
+    const result = win ? 'VICTORY' : draw ? 'DRAW' : 'DEFEAT';
+    const cls    = win ? 'win'     : draw ? 'draw' : 'lose';
+    const overlay = document.createElement('div');
+    overlay.className = 'cc-result-overlay ' + cls;
+    overlay.innerHTML = `
+      <h1 class="duel-result ${cls}">${result}</h1>
+      <div class="cc-final">
+        <div>YOU: <b style="color:#f5b827;">${yourTotal}</b></div>
+        <div style="margin:0 16px;">vs</div>
+        <div>${opponent.name.toUpperCase()}: <b style="color:#d6322f;">${aiTotal}</b></div>
+      </div>
+      <div class="cc-final-msg">${win ? bonusMsg : (draw ? 'It’s a tie — no payout.' : 'No prize this round.')}</div>
+      <button class="duel-close">CLOSE</button>`;
+    modal.querySelector('.cc-stage').appendChild(overlay);
+    overlay.querySelector('.duel-close').addEventListener('click', () => { modal.remove(); window.location.reload(); });
+    setTimeout(checkAchievements, 200);
+  }
+
+  repaint();
 }
 
 function initDuel() {
@@ -427,20 +644,203 @@ function initDuel() {
   ONLINE_PLAYERS.forEach(p => {
     const tr = document.createElement('tr');
     tr.innerHTML = '<td>' + p.name + '</td><td>' + p.rank + '</td><td>' + p.deck + '</td>' +
-                   '<td><button class="play" data-name="' + p.name + '">DUEL</button></td>';
+                   '<td><button class="play" data-name="' + p.name + '" data-rank="' + p.rank + '">DUEL</button></td>';
     tbody.appendChild(tr);
   });
   tbody.addEventListener('click', e => {
     const btn = e.target.closest('button.play');
     if (!btn) return;
-    openDuelTeamPicker(btn.dataset.name);
+    location.href = 'duel.html?vs=' + encodeURIComponent(btn.dataset.name) +
+                    '&rank=' + encodeURIComponent(btn.dataset.rank);
   });
 
   const s = window.__dt.load();
   const streakNote = document.createElement('p');
   streakNote.style.cssText = 'color:#cfe2e8;letter-spacing:1px;margin-top:8px;';
-  streakNote.innerHTML = 'Wins: <b>' + (s.duelsWon || 0) + '</b> &nbsp; Streak: <b>' + (s.duelStreak || 0) + '</b> &nbsp; (Win 5 in a row for a bonus card.)';
+  streakNote.innerHTML = 'Wins: <b>' + (s.duelsWon || 0) + '</b> &nbsp; Streak: <b>' + (s.duelStreak || 0) +
+                         '</b> &nbsp; (Win 5 in a row for a bonus card.)';
   document.querySelector('.lobby-list').appendChild(streakNote);
+}
+
+/* ---- Duel arena page (duel.html) ---- */
+function initDuelArena() {
+  const params = new URLSearchParams(location.search);
+  const opponent = {
+    name: params.get('vs')   || 'beanboy42',
+    rank: params.get('rank') || 'Cadet',
+  };
+  document.getElementById('daOppName').textContent     = opponent.name;
+  document.getElementById('daThemLabel').textContent   = opponent.name.toUpperCase();
+  document.getElementById('daResultThemLabel').textContent = opponent.name.toUpperCase();
+
+  const yourDeck = buildDeckFromInventory();
+  const aiDeck   = buildAIDeck(opponent.rank);
+  const yourGoalCard = yourDeck[yourDeck.length - 1];
+  const aiGoalCard   = aiDeck[aiDeck.length - 1];
+  const yourGoal = colorOf(yourGoalCard);
+  const aiGoal   = colorOf(aiGoalCard);
+  const yourPlay = yourDeck.slice(0, 11);
+  const aiPlay   = aiDeck.slice(0, 11);
+  const HAND_SIZE = 5;
+  const yourHand = yourPlay.slice(0, HAND_SIZE);
+  const yourDraw = yourPlay.slice(HAND_SIZE);
+  const aiHand   = aiPlay.slice(0, HAND_SIZE);
+  const aiDraw   = aiPlay.slice(HAND_SIZE);
+  const yourField = []; const aiField = [];
+  let yourTurn = true; let locked = false;
+
+  // Goals UI
+  document.getElementById('daYourGoalPip').style.background  = COMBAT_COLORS[yourGoal].hex;
+  document.getElementById('daYourGoalName').textContent      = COMBAT_COLORS[yourGoal].name;
+  document.getElementById('daYourGoalCard').textContent      = yourGoalCard.name;
+  document.getElementById('daThemGoalPip').style.background  = COMBAT_COLORS[aiGoal].hex;
+  document.getElementById('daThemGoalName').textContent      = COMBAT_COLORS[aiGoal].name;
+  document.getElementById('daThemGoalCard').textContent      = aiGoalCard.name;
+  document.getElementById('daThemGoalLabel').textContent     = opponent.name.toUpperCase() + "'S GOAL";
+
+  document.getElementById('daForfeit').addEventListener('click', () => {
+    if (confirm('Forfeit this duel?')) location.href = 'play-dtoons.html';
+  });
+
+  // Intro sequence: READY → FIGHT, then deal hand.
+  const intro = document.getElementById('daIntro');
+  const introText = document.getElementById('daIntroText');
+  setTimeout(() => { introText.textContent = 'FIGHT!'; introText.classList.add('flash'); }, 900);
+  setTimeout(() => { intro.classList.add('hide'); dealHand(); }, 1700);
+
+  function dealHand() {
+    const handHost = document.getElementById('daYouHand');
+    handHost.innerHTML = '';
+    yourHand.forEach((c, i) => {
+      const t = makeCard(c, yourGoal, true);
+      t.classList.add('da-deal-in');
+      t.style.animationDelay = (i * 80) + 'ms';
+      t.addEventListener('click', () => playYourCard(i));
+      handHost.appendChild(t);
+    });
+    document.getElementById('daTurnInfo').textContent = 'Your move — click a card to play it';
+  }
+
+  function makeCard(c, goal, withStats) {
+    const t = window.buildCardToon(c, { size: withStats ? 92 : 78, showStats: withStats });
+    if (colorOf(c) === goal) t.classList.add('da-match');
+    const pwr = document.createElement('div');
+    pwr.className = 'da-power';
+    if (colorOf(c) === goal) pwr.classList.add('bonus');
+    pwr.textContent = powerWithGoal(c, goal);
+    t.appendChild(pwr);
+    return t;
+  }
+
+  function tally(field, goal) { return field.reduce((s, c) => s + powerWithGoal(c, goal), 0); }
+
+  function bumpPower(elId, value) {
+    const el = document.getElementById(elId);
+    el.textContent = value;
+    el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  }
+
+  function playYourCard(idx) {
+    if (locked || !yourTurn) return;
+    locked = true; yourTurn = false;
+    const card = yourHand.splice(idx, 1)[0];
+    if (!card) { locked = false; yourTurn = true; return; }
+    yourField.push(card);
+
+    // Refresh hand: re-render with remaining cards, draw if any.
+    if (yourDraw.length) yourHand.push(yourDraw.shift());
+    rerenderHand();
+
+    // Animate played card into the field.
+    const fieldEl = document.getElementById('daYouField');
+    const t = makeCard(card, yourGoal, false);
+    t.classList.add('da-fly-in-bottom');
+    fieldEl.appendChild(t);
+    bumpPower('daYouPower', tally(yourField, yourGoal));
+    document.getElementById('daTurnInfo').textContent =
+      'You played ' + card.name + ' (' + powerWithGoal(card, yourGoal) + ')';
+
+    setTimeout(playAI, 900);
+  }
+
+  function rerenderHand() {
+    const handHost = document.getElementById('daYouHand');
+    handHost.innerHTML = '';
+    yourHand.forEach((c, i) => {
+      const t = makeCard(c, yourGoal, true);
+      t.addEventListener('click', () => playYourCard(i));
+      handHost.appendChild(t);
+    });
+  }
+
+  function playAI() {
+    if (!aiHand.length) return checkEnd();
+    let bestIdx = 0, bestVal = -1;
+    aiHand.forEach((c, i) => {
+      const v = powerWithGoal(c, aiGoal);
+      if (v > bestVal) { bestVal = v; bestIdx = i; }
+    });
+    const card = aiHand.splice(bestIdx, 1)[0];
+    aiField.push(card);
+    if (aiDraw.length) aiHand.push(aiDraw.shift());
+
+    const fieldEl = document.getElementById('daThemField');
+    const t = makeCard(card, aiGoal, false);
+    t.classList.add('da-fly-in-top');
+    fieldEl.appendChild(t);
+    bumpPower('daThemPower', tally(aiField, aiGoal));
+    document.getElementById('daTurnInfo').textContent =
+      opponent.name + ' played ' + card.name + ' (' + powerWithGoal(card, aiGoal) + ')';
+
+    setTimeout(() => {
+      yourTurn = true; locked = false;
+      if (!checkEnd()) document.getElementById('daTurnInfo').textContent = 'Your move — click a card to play it';
+    }, 700);
+  }
+
+  function checkEnd() {
+    if (yourField.length >= 11 && aiField.length >= 11) { endDuel(); return true; }
+    return false;
+  }
+
+  function endDuel() {
+    const youTotal  = tally(yourField, yourGoal);
+    const themTotal = tally(aiField,   aiGoal);
+    const win  = youTotal > themTotal;
+    const draw = youTotal === themTotal;
+
+    const s = window.__dt.load();
+    let bonusMsg = '';
+    if (win) {
+      s.duelsWon = (s.duelsWon || 0) + 1;
+      s.duelStreak = (s.duelStreak || 0) + 1;
+      s.maxStreak = Math.max(s.maxStreak || 0, s.duelStreak);
+      s.coins += 200;
+      bonusMsg = '+$2.00 prize';
+      if (s.duelStreak % 5 === 0) {
+        const rarity = ['rare','epic','epic','legendary'][Math.floor(Math.random()*4)];
+        const pool = window.CARDS_BY_RARITY[rarity];
+        const card = pool[Math.floor(Math.random() * pool.length)];
+        s.inventory.push(card.id);
+        bonusMsg += ' + bonus ' + rarity.toUpperCase() + ': ' + card.name;
+      }
+    } else if (!draw) {
+      s.duelsLost = (s.duelsLost || 0) + 1;
+      s.duelStreak = 0;
+    }
+    window.__dt.save(s);
+
+    const overlay = document.getElementById('daResult');
+    document.getElementById('daResultTitle').textContent = win ? 'VICTORY' : draw ? 'DRAW' : 'DEFEAT';
+    document.getElementById('daResultTitle').className = 'da-result-title ' + (win ? 'win' : draw ? 'draw' : 'lose');
+    document.getElementById('daResultYou').textContent  = youTotal;
+    document.getElementById('daResultThem').textContent = themTotal;
+    document.getElementById('daResultMsg').textContent  = win ? bonusMsg : draw ? 'A tie — no payout.' : 'No prize this round.';
+    overlay.style.display = 'flex';
+    setTimeout(() => overlay.classList.add('show'), 50);
+    if (win) overlay.classList.add('victory');
+    setTimeout(checkAchievements, 200);
+  }
 }
 
 function openDuelTeamPicker(opponentName) {
