@@ -1,6 +1,7 @@
-/* Thin auth wrapper around supabase-js.
-   Exposes window.dtAuth — works without config (returns "guest" everywhere)
-   so the existing pages keep functioning while auth is being set up. */
+/* Supabase auth wrapper + state sync.
+   Exposes window.dtAuth — auth methods AND syncUp / syncDown that mirror
+   the localStorage state to the profiles + inventory tables. Works without
+   config (returns "guest" everywhere) so guest mode keeps functioning. */
 
 (function () {
   const cfg = window.SUPABASE_CONFIG || {};
@@ -12,6 +13,7 @@
 
   const listeners = new Set();
   let cachedUser = null;
+  let lastSyncedUserId = null; // so we only sync down once per session
 
   async function refresh() {
     if (!client) { cachedUser = null; emit(); return null; }
@@ -22,10 +24,93 @@
   }
   function emit() { listeners.forEach(fn => { try { fn(cachedUser); } catch(e){} }); }
 
-  window.dtAuth = {
-    configured,
-    client,
+  /* ---- State sync helpers ---- */
 
+  // Build a {cardId: qty} map from the flat inventory array.
+  function countMap(inv) {
+    const m = {};
+    (inv || []).forEach(id => { m[id] = (m[id] || 0) + 1; });
+    return m;
+  }
+  function expand(map) {
+    const out = [];
+    Object.entries(map).forEach(([id, qty]) => { for (let i = 0; i < qty; i++) out.push(id); });
+    return out;
+  }
+
+  async function syncDown() {
+    if (!client || !cachedUser || !window.__dt) return;
+    try {
+      const [{ data: profile }, { data: invRows }] = await Promise.all([
+        client.from('profiles').select('coins_cents, username').eq('id', cachedUser.id).maybeSingle(),
+        client.from('inventory').select('card_id, qty').eq('user_id', cachedUser.id),
+      ]);
+
+      const local = window.__dt.load();
+      // Coins: take the higher of local vs remote so progress isn't lost on a fresh device.
+      const remoteCoins = (profile && typeof profile.coins_cents === 'number') ? profile.coins_cents : 0;
+      const localCoins  = local.coins || 0;
+      local.coins = Math.max(localCoins, remoteCoins);
+
+      // Inventory: union — for each card take MAX(localQty, remoteQty).
+      const localCounts  = countMap(local.inventory);
+      const remoteCounts = {};
+      (invRows || []).forEach(r => { remoteCounts[r.card_id] = r.qty; });
+      const merged = {};
+      Object.keys(Object.assign({}, localCounts, remoteCounts)).forEach(id => {
+        merged[id] = Math.max(localCounts[id] || 0, remoteCounts[id] || 0);
+      });
+      local.inventory = expand(merged);
+
+      window.__dt.saveLocal(local);
+      if (window.__dt.paintWallet) window.__dt.paintWallet();
+
+      // Push the merged state back so server matches.
+      await syncUp();
+    } catch (e) {
+      console.warn('[dtAuth] syncDown failed:', e.message || e);
+    }
+  }
+
+  async function syncUp() {
+    if (!client || !cachedUser || !window.__dt) return;
+    try {
+      const local = window.__dt.load();
+
+      // Profile: upsert coins.
+      const { error: pErr } = await client.from('profiles').upsert({
+        id: cachedUser.id,
+        coins_cents: local.coins || 0,
+        username: cachedUser.email ? cachedUser.email.split('@')[0] : null,
+      }, { onConflict: 'id' });
+      if (pErr) console.warn('[dtAuth] profile upsert:', pErr.message);
+
+      // Inventory: replace-all per user. Simpler than computing diffs.
+      const { error: dErr } = await client.from('inventory').delete().eq('user_id', cachedUser.id);
+      if (dErr) console.warn('[dtAuth] inventory delete:', dErr.message);
+
+      const counts = countMap(local.inventory);
+      const rows = Object.entries(counts).map(([id, qty]) => ({
+        user_id: cachedUser.id, card_id: id, qty,
+      }));
+      if (rows.length) {
+        const { error: iErr } = await client.from('inventory').insert(rows);
+        if (iErr) console.warn('[dtAuth] inventory insert:', iErr.message);
+      }
+    } catch (e) {
+      console.warn('[dtAuth] syncUp failed:', e.message || e);
+    }
+  }
+
+  // Debounce save → upload bursts (e.g. multiple state changes during a duel).
+  let upTimer = null;
+  function debouncedSyncUp() {
+    if (upTimer) clearTimeout(upTimer);
+    upTimer = setTimeout(() => { upTimer = null; syncUp(); }, 1500);
+  }
+
+  window.dtAuth = {
+    configured, client,
     async signUp(email, password) {
       if (!client) throw new Error('Supabase not configured');
       const { data, error } = await client.auth.signUp({ email, password });
@@ -43,36 +128,60 @@
     async sendMagicLink(email) {
       if (!client) throw new Error('Supabase not configured');
       const { error } = await client.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: window.location.origin + '/index.html' }
+        email, options: { emailRedirectTo: window.location.origin + '/index.html' }
       });
       if (error) throw error;
     },
     async signOut() {
       if (!client) return;
       await client.auth.signOut();
+      lastSyncedUserId = null;
       await refresh();
     },
     onChange(fn) { listeners.add(fn); fn(cachedUser); return () => listeners.delete(fn); },
     getUser() { return cachedUser; },
     async ready() { await refresh(); return cachedUser; },
+    syncUp, syncDown, debouncedSyncUp,
   };
 
+  // Auto-sync on auth state changes.
+  async function maybeSync() {
+    await refresh();
+    if (cachedUser && cachedUser.id !== lastSyncedUserId) {
+      lastSyncedUserId = cachedUser.id;
+      await syncDown();
+    }
+    if (!cachedUser) lastSyncedUserId = null;
+  }
   if (client) {
-    client.auth.onAuthStateChange(() => refresh());
-    refresh();
+    client.auth.onAuthStateChange(maybeSync);
+    maybeSync();
   }
 })();
 
-/* Update the header pill / login button on every page once auth resolves. */
+/* DOMContentLoaded — paint header pill + hook __dt.save → debouncedSyncUp. */
 document.addEventListener('DOMContentLoaded', () => {
   if (!window.dtAuth) return;
+
+  // Wrap __dt.save so every state change pushes to Supabase when signed in.
+  if (window.__dt && typeof window.__dt.save === 'function') {
+    const original = window.__dt.save;
+    window.__dt.saveLocal = original; // expose the un-wrapped save for sync code to use
+    window.__dt.save = function (s) {
+      original(s);
+      if (window.dtAuth.getUser() && window.dtAuth.debouncedSyncUp) {
+        window.dtAuth.debouncedSyncUp();
+      }
+    };
+  }
+
   function paint(user) {
     document.querySelectorAll('#userPill').forEach(pill => {
       const coinsEl = pill.querySelector('#userCoins');
       const coinsText = coinsEl ? coinsEl.outerHTML : '';
       const name = user ? (user.user_metadata?.username || user.email.split('@')[0]) : 'guest';
-      pill.innerHTML = name + ' &middot; ' + coinsText;
+      const cloud = user ? ' <span class="cloud-badge" title="Synced to cloud">☁</span>' : '';
+      pill.innerHTML = name + cloud + ' &middot; ' + coinsText;
     });
     document.querySelectorAll('.logout').forEach(btn => {
       btn.textContent = user ? 'LOGOUT' : 'LOGIN';

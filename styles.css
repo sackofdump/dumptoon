@@ -1408,6 +1408,15 @@ footer {
 /* Poll results */
 .poll-results { margin-top: 10px; }
 
+/* Cloud-synced badge in the header pill */
+.cloud-badge {
+  display: inline-block;
+  color: #6cb148;
+  margin: 0 2px;
+  font-size: 13px;
+  text-shadow: 0 0 6px rgba(108,177,72,.5);
+}
+
 /* ===========================================================
    Duel Arena (duel.html) — full-page combat experience
    =========================================================== */
