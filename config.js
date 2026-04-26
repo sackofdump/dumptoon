@@ -1,9 +1,9 @@
-/* Supabase config — committed defaults.
-   To run locally with real auth, copy this file to config.local.js and fill in
-   your Supabase project URL + anon (public) key. config.local.js is gitignored.
-   The anon key is safe to expose client-side; Row Level Security in schema.sql
-   is what actually protects user data. NEVER commit the service_role key. */
+/* Supabase config — committed.
+   The "publishable" key (anon key) is designed by Supabase to be exposed in
+   client-side code. Row Level Security policies in schema.sql are what actually
+   protect user data. NEVER commit the service_role key.
+   For per-developer overrides, create config.local.js (gitignored). */
 window.SUPABASE_CONFIG = window.SUPABASE_CONFIG || {
-  url:     '',  // e.g. 'https://xyzcompany.supabase.co'
-  anonKey: '',  // e.g. 'eyJhbGciOi...'
+  url:     'https://ogvvgbfgjfofacpuovce.supabase.co',
+  anonKey: 'sb_publishable_jcqvS0RUu2uRB1KWaPe2sQ_rOtmXcr8',
 };

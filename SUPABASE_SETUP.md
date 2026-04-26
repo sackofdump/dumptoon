@@ -1,5 +1,11 @@
 # Supabase Setup
 
+**Status: configured.** `config.js` ships the project URL + publishable (anon) key. To swap projects, edit `config.js` or override locally with `config.local.js` (gitignored).
+
+The remaining manual step is **running `schema.sql`** once in your Supabase project's SQL Editor — that creates the `profiles`, `inventory`, `decks`, and `matches` tables with Row Level Security so each user can only read/write their own rows.
+
+---
+
 The site works without Supabase (state falls back to localStorage), but auth, cross-device wallets, and decks need a real backend. This is a one-time setup.
 
 ## 1. Create a project
