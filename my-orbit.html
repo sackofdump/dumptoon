@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Dumptoon — My Orbit</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="top-ad">AD &middot; 728 &times; 90</div>
+
+<div class="page">
+  <div class="dt-header">
+    <div class="dt-logo"><span class="small">DUMPTOON</span><span class="big">DT</span><span class="tag">NETWORK</span></div>
+    <nav class="dt-nav">
+      <button class="nav-btn red">GAMES</button>
+      <button class="nav-btn blue">TV SHOWS</button>
+      <button class="nav-btn green">TRADING CARDS</button>
+      <button class="nav-btn orange">SHOP</button>
+    </nav>
+    <div class="dt-search">
+      <div class="dt-search-row"><label>SEARCH:</label><input type="text" /><button class="go-btn">GO</button></div>
+      <div class="dt-search-meta"><div class="row"><span>EN ESPAÑOL</span><span>HELP</span><span class="speaker"></span></div></div>
+    </div>
+  </div>
+
+  <div class="orbit-bar">
+    <div class="brand"><span class="o-icon"></span><em>ORBIT&reg;</em> TRADING CARDS</div>
+    <div class="signed-in"><span>SIGNED IN AS</span><span class="pill">alice &middot; <span id="userCoins">$5.00</span></span><button class="logout">LOGOUT</button></div>
+  </div>
+
+  <div class="main-grid">
+    <aside class="sidebar">
+      <a class="side-tab" href="get-cards.html">GET CARDS</a>
+      <a class="side-tab" href="play-dtoons.html">PLAY dTOONS</a>
+      <a class="side-tab active" href="my-orbit.html">MY ORBIT</a>
+      <a class="side-tab" href="visit-dzones.html">VISIT dZONES</a>
+      <a class="side-tab" href="orbit-help.html">ORBIT HELP</a>
+      <a class="side-tab" href="trade.html" style="background:var(--orange);">TRADE</a>
+      <div class="ad-slot">AD</div>
+    </aside>
+
+    <main class="center">
+      <div class="page-title">MY ORBIT &middot; DECORATE YOUR SCENES</div>
+
+      <div class="orbit-stage">
+        <div class="orbit-bg-grid">
+          <div class="orbit-scene scene-1" data-scene="1">[ scene-bg-01 ]</div>
+          <div class="orbit-scene scene-2" data-scene="2">[ scene-bg-02 ]</div>
+          <div class="orbit-scene scene-3" data-scene="3">[ scene-bg-03 ]</div>
+          <div class="orbit-scene scene-4" data-scene="4">[ scene-bg-04 ]</div>
+        </div>
+
+        <div class="card-tray" id="orbitTray">
+          <div class="toon t1" draggable="true" data-art="dtoon-01">DTOON 01</div>
+          <div class="toon t2" draggable="true" data-art="dtoon-02">DTOON 02</div>
+          <div class="toon t3" draggable="true" data-art="dtoon-03">DTOON 03</div>
+          <div class="toon t4" draggable="true" data-art="dtoon-04">DTOON 04</div>
+          <div class="toon t5" draggable="true" data-art="dtoon-05">DTOON 05</div>
+          <div class="toon t6" draggable="true" data-art="dtoon-06">DTOON 06</div>
+        </div>
+        <p style="color:var(--text-muted);font-size:12px;margin-top:8px;">Drag cards onto any scene. Drag back to the tray to remove.</p>
+      </div>
+    </main>
+
+    <aside class="right-rail">
+      <div class="news-card">
+        <h4>Scene Backgrounds</h4>
+        <p>Pick up new scene backgrounds in the cMart. Holo backgrounds twinkle when a card is placed.</p>
+      </div>
+      <div class="tip-card">
+        <h4>Tip</h4>
+        <p>Visitors can stop by your Orbit and react to your scene layout. Earn &cent; when they do.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<footer>DUMPTOON DT NETWORK &middot; PLACEHOLDER TEMPLATE &middot; ART COMING SOON</footer>
+<script src="script.js"></script>
+<script>initOrbit();</script>
+</body>
+</html>

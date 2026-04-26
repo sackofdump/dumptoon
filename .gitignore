@@ -1,0 +1,16 @@
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+
+# Node (in case you add a build step)
+node_modules/
+npm-debug.log*
+
+# Secrets — Supabase / API keys go in config.local.js (never commit)
+.env
+.env.*
+config.local.js
+
+# Claude Code per-project settings (local permissions allowlist, etc.)
+.claude/

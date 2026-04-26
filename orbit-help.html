@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Dumptoon — Orbit Help</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="top-ad">AD &middot; 728 &times; 90</div>
+
+<div class="page">
+  <div class="dt-header">
+    <div class="dt-logo"><span class="small">DUMPTOON</span><span class="big">DT</span><span class="tag">NETWORK</span></div>
+    <nav class="dt-nav">
+      <button class="nav-btn red">GAMES</button>
+      <button class="nav-btn blue">TV SHOWS</button>
+      <button class="nav-btn green">TRADING CARDS</button>
+      <button class="nav-btn orange">SHOP</button>
+    </nav>
+    <div class="dt-search">
+      <div class="dt-search-row"><label>SEARCH:</label><input type="text" /><button class="go-btn">GO</button></div>
+      <div class="dt-search-meta"><div class="row"><span>EN ESPAÑOL</span><span>HELP</span><span class="speaker"></span></div></div>
+    </div>
+  </div>
+
+  <div class="orbit-bar">
+    <div class="brand"><span class="o-icon"></span><em>ORBIT&reg;</em> TRADING CARDS</div>
+    <div class="signed-in"><span>SIGNED IN AS</span><span class="pill">alice &middot; <span id="userCoins">$5.00</span></span><button class="logout">LOGOUT</button></div>
+  </div>
+
+  <div class="main-grid">
+    <aside class="sidebar">
+      <a class="side-tab" href="get-cards.html">GET CARDS</a>
+      <a class="side-tab" href="play-dtoons.html">PLAY dTOONS</a>
+      <a class="side-tab" href="my-orbit.html">MY ORBIT</a>
+      <a class="side-tab" href="visit-dzones.html">VISIT dZONES</a>
+      <a class="side-tab active" href="orbit-help.html">ORBIT HELP</a>
+      <a class="side-tab" href="trade.html" style="background:var(--orange);">TRADE</a>
+      <div class="ad-slot">AD</div>
+    </aside>
+
+    <main class="center">
+      <div class="page-title">ORBIT HELP &middot; CONTACT US</div>
+      <div class="help-panel">
+        <h2>NEED A HAND, ORBITER?</h2>
+        <p>Drop us a line about a bug, a scammer, a stuck trade, or just to say what's up. The Orbit team checks the inbox daily.</p>
+        <form id="helpForm">
+          <label>YOUR ORBITER NAME</label>
+          <input type="text" name="name" required />
+          <label>EMAIL</label>
+          <input type="email" name="email" required />
+          <label>TOPIC</label>
+          <input type="text" name="topic" placeholder="e.g. trade glitch, missing coins" />
+          <label>MESSAGE</label>
+          <textarea name="message" rows="6" required></textarea>
+          <button type="submit">SEND IT</button>
+        </form>
+        <div id="helpResult" style="margin-top:12px;font-family:Oswald,sans-serif;letter-spacing:2px;color:var(--green);"></div>
+      </div>
+    </main>
+
+    <aside class="right-rail">
+      <div class="tip-card">
+        <h4>Common Fixes</h4>
+        <p>Stuck trade? Refresh the page; both sides have to re-confirm. Missing coins after a zone game? They land in your wallet within 60 seconds.</p>
+      </div>
+      <div class="news-card">
+        <h4>Report Cheaters</h4>
+        <p>Use the topic <b>"report"</b> and include the orbiter's username. We follow up within 48 hours.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<footer>DUMPTOON DT NETWORK &middot; PLACEHOLDER TEMPLATE &middot; ART COMING SOON</footer>
+<script src="script.js"></script>
+<script>initHelp();</script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Dumptoon — Trade dToons</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="top-ad">AD &middot; 728 &times; 90</div>
+
+<div class="page">
+  <div class="dt-header">
+    <div class="dt-logo"><span class="small">DUMPTOON</span><span class="big">DT</span><span class="tag">NETWORK</span></div>
+    <nav class="dt-nav">
+      <button class="nav-btn red">GAMES</button>
+      <button class="nav-btn blue">TV SHOWS</button>
+      <button class="nav-btn green">TRADING CARDS</button>
+      <button class="nav-btn orange">SHOP</button>
+    </nav>
+    <div class="dt-search">
+      <div class="dt-search-row"><label>SEARCH:</label><input type="text" /><button class="go-btn">GO</button></div>
+      <div class="dt-search-meta"><div class="row"><span>EN ESPAÑOL</span><span>HELP</span><span class="speaker"></span></div></div>
+    </div>
+  </div>
+
+  <div class="orbit-bar">
+    <div class="brand"><span class="o-icon"></span><em>ORBIT&reg;</em> TRADING CARDS</div>
+    <div class="signed-in"><span>SIGNED IN AS</span><span class="pill">alice &middot; <span id="userCoins">$5.00</span></span><button class="logout">LOGOUT</button></div>
+  </div>
+
+  <div class="main-grid">
+    <aside class="sidebar">
+      <a class="side-tab" href="get-cards.html">GET CARDS</a>
+      <a class="side-tab" href="play-dtoons.html">PLAY dTOONS</a>
+      <a class="side-tab" href="my-orbit.html">MY ORBIT</a>
+      <a class="side-tab" href="visit-dzones.html">VISIT dZONES</a>
+      <a class="side-tab" href="orbit-help.html">ORBIT HELP</a>
+      <a class="side-tab active" href="trade.html" style="background:var(--orange);">TRADE</a>
+      <div class="ad-slot">AD</div>
+    </aside>
+
+    <main class="center">
+      <div class="page-title">TRADE WINDOW</div>
+
+      <div class="lobby-list" id="tradeLobby">
+        <h4 style="margin:0 0 8px;color:var(--text-dark);font-family:Oswald,sans-serif;letter-spacing:2px;">ORBITERS ONLINE</h4>
+        <table>
+          <thead><tr><th>USERNAME</th><th>STATUS</th><th>CARDS</th><th></th></tr></thead>
+          <tbody id="onlinePlayers"></tbody>
+        </table>
+      </div>
+
+      <div class="split-board" style="margin-top:12px;">
+        <div class="player-pane">
+          <h4>YOU — alice</h4>
+          <div class="slot-row" id="yourOffer" data-tray="you"></div>
+          <h4 style="margin-top:14px;">YOUR INVENTORY</h4>
+          <div class="slot-row" id="yourInventory" data-tray="inv"></div>
+        </div>
+        <div class="center-controls">
+          <button class="ok" id="confirmTrade">OFFER</button>
+          <button id="cancelTrade">CANCEL</button>
+          <small style="color:var(--text-muted);text-align:center;">Drag cards into the offer rows.</small>
+        </div>
+        <div class="player-pane">
+          <h4 id="partnerName">THEM — pick a player</h4>
+          <div class="slot-row" id="theirOffer" data-tray="them"></div>
+          <h4 style="margin-top:14px;">THEIR BINDER</h4>
+          <div class="slot-row" id="theirInventory" data-tray="theirinv"></div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="right-rail">
+      <div class="tip-card">
+        <h4>Trade Safe</h4>
+        <p>Never accept a trade that says "trust me, I'll send the rest later." Both sides have to lock the window for it to count.</p>
+      </div>
+      <div class="news-card">
+        <h4>cMart Restock</h4>
+        <p>New booster packs drop Friday. Save your &cent; for the holos.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<footer>DUMPTOON DT NETWORK &middot; PLACEHOLDER TEMPLATE &middot; ART COMING SOON</footer>
+<script src="cards.js"></script>
+<script src="card-art.js"></script>
+<script src="script.js"></script>
+<script>initTrade();</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Dumptoon — Play dToons</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="top-ad">AD &middot; 728 &times; 90</div>
+
+<div class="page">
+  <div class="dt-header">
+    <div class="dt-logo"><span class="small">DUMPTOON</span><span class="big">DT</span><span class="tag">NETWORK</span></div>
+    <nav class="dt-nav">
+      <button class="nav-btn red">GAMES</button>
+      <button class="nav-btn blue">TV SHOWS</button>
+      <button class="nav-btn green">TRADING CARDS</button>
+      <button class="nav-btn orange">SHOP</button>
+    </nav>
+    <div class="dt-search">
+      <div class="dt-search-row"><label>SEARCH:</label><input type="text" /><button class="go-btn">GO</button></div>
+      <div class="dt-search-meta"><div class="row"><span>EN ESPAÑOL</span><span>HELP</span><span class="speaker"></span></div></div>
+    </div>
+  </div>
+
+  <div class="orbit-bar">
+    <div class="brand"><span class="o-icon"></span><em>ORBIT&reg;</em> TRADING CARDS</div>
+    <div class="signed-in"><span>SIGNED IN AS</span><span class="pill">alice &middot; <span id="userCoins">$5.00</span></span><button class="logout">LOGOUT</button></div>
+  </div>
+
+  <div class="main-grid">
+    <aside class="sidebar">
+      <a class="side-tab" href="get-cards.html">GET CARDS</a>
+      <a class="side-tab active" href="play-dtoons.html">PLAY dTOONS</a>
+      <a class="side-tab" href="my-orbit.html">MY ORBIT</a>
+      <a class="side-tab" href="visit-dzones.html">VISIT dZONES</a>
+      <a class="side-tab" href="orbit-help.html">ORBIT HELP</a>
+      <a class="side-tab" href="trade.html" style="background:var(--orange);">TRADE</a>
+      <div class="ad-slot">AD</div>
+    </aside>
+
+    <main class="center">
+      <div class="page-title">PLAY dTOONS &middot; LIVE DUEL</div>
+
+      <div class="lobby-list">
+        <h4 style="margin:0 0 8px;color:var(--text-dark);font-family:Oswald,sans-serif;letter-spacing:2px;">DUEL LOBBY</h4>
+        <table>
+          <thead><tr><th>OPPONENT</th><th>RANK</th><th>DECK</th><th></th></tr></thead>
+          <tbody id="duelLobby"></tbody>
+        </table>
+      </div>
+
+      <div class="split-board" style="margin-top:12px;">
+        <div class="player-pane">
+          <h4>YOUR FIELD &mdash; alice</h4>
+          <div class="slot-row" id="yourField" style="min-height:180px;"></div>
+          <h4 style="margin-top:14px;">YOUR HAND</h4>
+          <div class="slot-row" id="yourHand"></div>
+        </div>
+        <div class="center-controls">
+          <button class="ok" id="endTurn">END<br/>TURN</button>
+          <button id="surrender">GIVE UP</button>
+          <div style="font-family:Oswald,sans-serif;letter-spacing:2px;color:var(--text-dark);text-align:center;margin-top:8px;">
+            VS<br/><span id="opponentName">—</span>
+          </div>
+        </div>
+        <div class="player-pane">
+          <h4 id="opponentLabel">OPPONENT FIELD</h4>
+          <div class="slot-row" id="theirField" style="min-height:180px;"></div>
+          <h4 style="margin-top:14px;">OPPONENT HAND (HIDDEN)</h4>
+          <div class="slot-row" id="theirHand"></div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="right-rail">
+      <div class="play-dtoons-card">
+        <div class="h">PLAY <span class="red">dTOONS</span></div>
+        <div class="sub">TRADING CARD GAME</div>
+        <div class="feature-circle" data-art="featured-dueler">DUELER</div>
+        <div class="name">DUEL OF THE WEEK</div>
+        <div class="desc">Win 3 ranked matches for a holo card.</div>
+        <div class="cta">PLAY DTOONS LIVE AGAINST<br/>ORBITERS ONLINE NOW!</div>
+      </div>
+      <div class="tip-card">
+        <h4>Game Tips</h4>
+        <p>Drop matched-power cards on the same column to chain a combo. Same color rarity in three columns triggers a board-wide cancel.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<footer>DUMPTOON DT NETWORK &middot; PLACEHOLDER TEMPLATE &middot; ART COMING SOON</footer>
+<script src="cards.js"></script>
+<script src="card-art.js"></script>
+<script src="script.js"></script>
+<script>initDuel();</script>
+</body>
+</html>
