@@ -179,9 +179,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('#userPill').forEach(pill => {
       const coinsEl = pill.querySelector('#userCoins');
       const coinsText = coinsEl ? coinsEl.outerHTML : '';
-      const name = user ? (user.user_metadata?.username || user.email.split('@')[0]) : 'guest';
-      const cloud = user ? ' <span class="cloud-badge" title="Synced to cloud">☁</span>' : '';
-      pill.innerHTML = name + cloud + ' &middot; ' + coinsText;
+      if (user) {
+        const name  = user.user_metadata?.username || user.email.split('@')[0];
+        const cloud = ' <span class="cloud-badge" title="Synced to cloud">☁</span>';
+        pill.innerHTML = name + cloud + ' &middot; ' + coinsText;
+      } else {
+        // Guest mode: no name label. Just show the wallet — keeps the badge clean
+        // and avoids the awkward "guest · $19.45". The "SIGNED IN AS" caption next
+        // to the pill still flips to a SIGN IN prompt below.
+        pill.innerHTML = coinsText + ' <a href="login.html" class="signin-link">SIGN IN TO SAVE</a>';
+      }
+    });
+    document.querySelectorAll('.signed-in > span:first-child').forEach(label => {
+      // The "SIGNED IN AS" caption next to the pill: hide for guests so the layout
+      // doesn't read "SIGNED IN AS  $19.45" with no name.
+      label.style.display = user ? '' : 'none';
     });
     document.querySelectorAll('.logout').forEach(btn => {
       btn.textContent = user ? 'LOGOUT' : 'LOGIN';
