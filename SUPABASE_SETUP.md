@@ -39,12 +39,27 @@ window.SUPABASE_CONFIG = {
 
 All tables have Row Level Security so a logged-in user can only read/write their own rows.
 
-## 5. Auth settings
-**Authentication → Providers → Email**:
-- Disable "Confirm email" if you want signup to work without an inbox. Re-enable for production.
+## 5. Auth settings — IMPORTANT for signups to work
 
+### Email delivery: pick one of two paths
+
+**Path A — instant signups, no email needed (recommended for dev/testing):**
+1. **Authentication → Providers → Email**
+2. Toggle **OFF** "Confirm email"
+3. Save. Now signup creates accounts immediately and signs you in.
+
+**Path B — real email delivery (recommended for production):**
+Supabase's built-in email service is rate-limited to ~4 emails/hour per
+project and emails often land in spam. For real delivery, configure SMTP:
+1. **Project Settings → Auth → SMTP Settings**
+2. Plug in credentials from Resend, SendGrid, Mailgun, AWS SES, etc.
+3. Set the "Sender email" / "Sender name" so messages aren't flagged.
+
+### Site URL
 **Authentication → URL Configuration → Site URL**:
-- Set to wherever you host the site (e.g. `http://localhost:8000` for local dev). Required for magic-link redirects.
+- Set to wherever you host the site (e.g. `http://localhost:8000` for local
+  dev, `https://sackofdump.github.io/dumptoon/` for the deployed site).
+  Required for magic-link redirects.
 
 ## 6. Try it
 Open `login.html` and create an account. The header pill should switch from `guest` to your username.

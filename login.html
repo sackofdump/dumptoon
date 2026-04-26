@@ -141,8 +141,23 @@
     setTimeout(() => window.location.href = 'index.html', 600);
   });
   bind('formSignup', async ({email, password}) => {
-    await window.dtAuth.signUp(email, password);
-    show('ok', 'Account created. Check your email if confirmation is required, then sign in.');
+    const data = await window.dtAuth.signUp(email, password);
+    // Supabase returns a session immediately if email confirmation is OFF.
+    if (data && data.session) {
+      show('ok', 'Account created and signed in. Redirecting…');
+      setTimeout(() => window.location.href = 'index.html', 700);
+      return;
+    }
+    // No session: either confirmation required, or this email is already registered.
+    if (data && data.user && data.user.identities && data.user.identities.length === 0) {
+      show('err', 'That email is already registered. Try signing in instead.');
+      return;
+    }
+    show('ok',
+      'Account pending. A confirmation email was requested — but Supabase\'s built-in email is ' +
+      'rate-limited and often does not arrive. ' +
+      '<b>Fix: Supabase Dashboard → Authentication → Providers → Email → turn OFF "Confirm email"</b>, ' +
+      'then sign up again. Or configure SMTP for real email delivery.');
   });
   bind('formMagic', async ({email}) => {
     await window.dtAuth.sendMagicLink(email);
